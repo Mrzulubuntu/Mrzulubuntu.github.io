@@ -2350,3 +2350,422 @@ Phase 4: Implementation Checklist
  Add indicator toggle controlsdocumentdocument..addEventListeneraddEventListener(('DOMContentLoaded' 'DOMContentLoaded',,  functionfunction(())  {{
         windowwindow..tradingCharttradingChart  ==  newnew  TradingChart TradingChart(('trading-container' 'trading-container'));;
 }}));;
+
+
+                                                                   ***********  Second Continuation ******************
+
+# utils/error_handler.py
+"""
+🚨 COMPREHENSIVE ERROR HANDLING SYSTEM 🚨
+This module provides robust error handling, logging, and notification capabilities
+for the TradingView platform. It includes DuckDB logging, email alerts, and
+beautiful progress tracking.
+"""
+
+import logging
+import time
+import traceback
+import sys
+from datetime import datetime
+from functools import wraps
+from typing import Callable, Any, Optional, Dict
+from pathlib import Path
+import duckdb
+import asyncio
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.text import Text
+from tqdm import tqdm
+import random
+
+# Create console for rich output
+console = Console()
+
+class TradingViewErrorHandler:
+    """
+    🔧 MAIN ERROR HANDLING CLASS
+    Manages all error handling, logging, and notification systems
+    """
+    
+    def __init__(self, email_config: Optional[Dict] = None, telegram_config: Optional[Dict] = None):
+        """Initialize error handler with optional notification configs"""
+        print("🔥 Initializing TradingView Error Handler...")
+        
+        self.email_config = email_config
+        self.telegram_config = telegram_config
+        self.error_count = 0
+        self.last_error_time = None
+        
+        # Create necessary directories
+        self.setup_directories()
+        
+        # Setup logging system
+        self.setup_logging()
+        
+        # Setup DuckDB for error storage
+        self.setup_error_database()
+        
+        print("✅ Error Handler initialized successfully!")
+    
+    def setup_directories(self):
+        """Create necessary directories for logs and data"""
+        print("📁 Setting up directory structure...")
+        
+        directories = ['logs', 'data', 'data/errors']
+        for directory in directories:
+            Path(directory).mkdir(parents=True, exist_ok=True)
+            print(f"   📂 Created/verified directory: {directory}")
+    
+    def setup_logging(self):
+        """Configure comprehensive logging system"""
+        print("📝 Configuring logging system...")
+        
+        # Create formatters
+        detailed_formatter = logging.Formatter(
+            '%(asctime)s | %(levelname)-8s | %(name)-20s | %(funcName)-15s:%(lineno)-4d | %(message)s'
+        )
+        
+        simple_formatter = logging.Formatter(
+            '%(asctime)s [%(levelname)s] %(message)s'
+        )
+        
+        # Setup root logger
+        self.logger = logging.getLogger('TradingView')
+        self.logger.setLevel(logging.DEBUG)
+        
+        # File handler for detailed logs
+        file_handler = logging.FileHandler('logs/trading_platform.log')
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(detailed_formatter)
+        
+        # Console handler for important messages
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(logging.INFO)
+        console_handler.setFormatter(simple_formatter)
+        
+        # Error file handler
+        error_handler = logging.FileHandler('logs/errors.log')
+        error_handler.setLevel(logging.ERROR)
+        error_handler.setFormatter(detailed_formatter)
+        
+        # Add handlers
+        self.logger.addHandler(file_handler)
+        self.logger.addHandler(console_handler)
+        self.logger.addHandler(error_handler)
+        
+        print("✅ Logging system configured!")
+    
+    def setup_error_database(self):
+        """Setup DuckDB database for storing errors and logs"""
+        print("🗄️ Setting up error database...")
+        
+        try:
+            conn = duckdb.connect('data/errors/system_errors.duckdb')
+            
+            # Create errors table
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS system_errors (
+                    id INTEGER PRIMARY KEY,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    error_type VARCHAR(100),
+                    error_message TEXT,
+                    stack_trace TEXT,
+                    function_name VARCHAR(100),
+                    file_name VARCHAR(200),
+                    line_number INTEGER,
+                    severity VARCHAR(20),
+                    component VARCHAR(50),
+                    resolved BOOLEAN DEFAULT FALSE,
+                    resolution_notes TEXT
+                )
+            """)
+            
+            # Create performance logs table
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS performance_logs (
+                    id INTEGER PRIMARY KEY,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    operation VARCHAR(100),
+                    duration_ms DOUBLE,
+                    memory_usage_mb DOUBLE,
+                    cpu_usage_percent DOUBLE,
+                    details TEXT
+                )
+            """)
+            
+            # Create system events table
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS system_events (
+                    id INTEGER PRIMARY KEY,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    event_type VARCHAR(50),
+                    event_description TEXT,
+                    component VARCHAR(50),
+                    user_id VARCHAR(50),
+                    session_id VARCHAR(100),
+                    additional_data TEXT
+                )
+            """)
+            
+            conn.close()
+            print("✅ Error database setup complete!")
+            
+        except Exception as e:
+            print(f"❌ Error setting up database: {e}")
+            self.logger.error(f"Database setup failed: {e}")
+    
+    def log_error_to_database(self, error_info: Dict):
+        """Store error information in DuckDB"""
+        try:
+            conn = duckdb.connect('data/errors/system_errors.duckdb')
+            conn.execute("""
+                INSERT INTO system_errors 
+                (error_type, error_message, stack_trace, function_name, file_name, line_number, severity, component)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                error_info.get('error_type', 'Unknown'),
+                error_info.get('error_message', ''),
+                error_info.get('stack_trace', ''),
+                error_info.get('function_name', ''),
+                error_info.get('file_name', ''),
+                error_info.get('line_number', 0),
+                error_info.get('severity', 'ERROR'),
+                error_info.get('component', 'SYSTEM')
+            ))
+            conn.close()
+        except Exception as e:
+            self.logger.error(f"Failed to log error to database: {e}")
+    
+    def handle_exception(self, exception: Exception, context: str = ""):
+        """Handle an exception with comprehensive logging and notification"""
+        print(f"🚨 EXCEPTION CAUGHT: {type(exception).__name__}")
+        
+        # Get exception details
+        error_info = {
+            'error_type': type(exception).__name__,
+            'error_message': str(exception),
+            'stack_trace': traceback.format_exc(),
+            'context': context,
+            'timestamp': datetime.now(),
+            'function_name': sys._getframe(1).f_code.co_name,
+            'file_name': sys._getframe(1).f_code.co_filename,
+            'line_number': sys._getframe(1).f_lineno,
+            'severity': 'ERROR',
+            'component': 'WEBSOCKET' if 'websocket' in context.lower() else 'SYSTEM'
+        }
+        
+        # Log to file and database
+        self.logger.error(f"Error in {context}: {exception}")
+        self.log_error_to_database(error_info)
+        
+        # Display rich error panel
+        self.display_error_panel(error_info)
+        
+        # Update error counter
+        self.error_count += 1
+        self.last_error_time = datetime.now()
+        
+        # Send notifications (if configured)
+        # self.send_error_notification(error_info)  # Uncomment when ready
+        
+        return error_info
+    
+    def display_error_panel(self, error_info: Dict):
+        """Display beautiful error information using Rich"""
+        error_text = Text()
+        error_text.append("🚨 ERROR DETECTED 🚨\n", style="bold red")
+        error_text.append(f"Type: {error_info['error_type']}\n", style="bold yellow")
+        error_text.append(f"Message: {error_info['error_message']}\n", style="white")
+        error_text.append(f"Function: {error_info['function_name']}\n", style="blue")
+        error_text.append(f"File: {error_info['file_name']}:{error_info['line_number']}\n", style="green")
+        error_text.append(f"Time: {error_info['timestamp']}\n", style="magenta")
+        
+        panel = Panel(
+            error_text,
+            title="[bold red]SYSTEM ERROR[/bold red]",
+            border_style="red",
+            padding=(1, 2)
+        )
+        
+        console.print(panel)
+    
+    def send_error_notification(self, error_info: Dict):
+        """Send error notifications via email and telegram (when configured)"""
+        print("📧 Preparing error notifications...")
+        
+        # Email notification (commented out until configured)
+        """
+        if self.email_config:
+            try:
+                yag = yagmail.SMTP(
+                    user=self.email_config['user'],
+                    password=self.email_config['password']
+                )
+                
+                subject = f"🚨 TradingView Error Alert: {error_info['error_type']}"
+                body = f'''
+                Error Details:
+                - Type: {error_info['error_type']}
+                - Message: {error_info['error_message']}
+                - Function: {error_info['function_name']}
+                - File: {error_info['file_name']}:{error_info['line_number']}
+                - Time: {error_info['timestamp']}
+                - Context: {error_info['context']}
+                
+                Stack Trace:
+                {error_info['stack_trace']}
+                '''
+                
+                yag.send(
+                    to=self.email_config['recipients'],
+                    subject=subject,
+                    contents=body
+                )
+                print("✅ Email notification sent!")
+                
+            except Exception as e:
+                print(f"❌ Failed to send email notification: {e}")
+        """
+        
+        # Telegram notification (commented out until configured)
+        """
+        if self.telegram_config:
+            try:
+                import telegram
+                bot = telegram.Bot(token=self.telegram_config['token'])
+                
+                message = f'''
+🚨 *TradingView Error Alert*
+                
+*Type:* `{error_info['error_type']}`
+*Message:* `{error_info['error_message']}`
+*Function:* `{error_info['function_name']}`
+*Time:* `{error_info['timestamp']}`
+                '''
+                
+                bot.send_message(
+                    chat_id=self.telegram_config['chat_id'],
+                    text=message,
+                    parse_mode='Markdown'
+                )
+                print("✅ Telegram notification sent!")
+                
+            except Exception as e:
+                print(f"❌ Failed to send telegram notification: {e}")
+        """
+
+
+class CustomProgressBar:
+    """
+    🎨 BEAUTIFUL PROGRESS BAR SYSTEM
+    Creates animated, colorful progress bars with various styles
+    """
+    
+    def __init__(self):
+        """Initialize progress bar with different styles and colors"""
+        print("🎨 Initializing Custom Progress Bar System...")
+        
+        # Different bar styles for variety
+        self.bar_styles = [
+            '[|||||| {}]',   # Pipe style
+            '[██████ {}]',   # Block style  
+            '[★★★★★ {}]',   # Star style
+            '[●●●●● {}]',   # Circle style
+            '[♦♦♦♦♦ {}]',   # Diamond style
+            '[▓▓▓▓▓ {}]',   # Shade style
+            '[▀▀▀▀▀ {}]',   # Top block style
+        ]
+        
+        # Color progression for different completion percentages
+        self.color_progression = [
+            'red',      # 0-20%
+            'yellow',   # 20-40%
+            'blue',     # 40-60%
+            'green',    # 60-80%
+            'magenta'   # 80-100%
+        ]
+        
+        print("✅ Progress Bar System ready!")
+    
+    def create_processing_bar(self, total: int, description: str = "Processing", delay: float = 0.1):
+        """Create an animated processing bar with random style"""
+        print(f"🔄 Starting progress: {description}")
+        
+        # Choose random style
+        style = random.choice(self.bar_styles)
+        current_color_index = 0
+        
+        # Custom format function
+        def format_bar(n, total, elapsed, rate, remaining):
+            # Calculate percentage
+            percentage = (n / total) * 100 if total > 0 else 0
+            
+            # Determine color based on percentage
+            color_index = min(int(percentage // 20), len(self.color_progression) - 1)
+            color = self.color_progression[color_index]
+            
+            # Create custom bar display
+            filled_length = int((n / total) * 30) if total > 0 else 0
+            bar_display = '█' * filled_length + '░' * (30 - filled_length)
+            
+            return f'[{color}]{bar_display}[/{color}] {percentage:.1f}%'
+        
+        # Create tqdm progress bar
+        with tqdm(
+            total=total,
+            desc=description,
+            bar_format='{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]',
+            ascii=False,
+            ncols=80,
+            colour='green'
+        ) as pbar:
+            
+            for i in range(total):
+                # Simulate work
+                time.sleep(delay)
+                
+                # Update progress
+                pbar.update(1)
+                
+                # Change color every 20%
+                if i > 0 and i % (total // 5) == 0:
+                    current_color_index = min(current_color_index + 1, len(self.color_progression) - 1)
+                    pbar.colour = self.color_progression[current_color_index]
+        
+        print(f"✅ {description} completed!")
+    
+    def create_data_loading_bar(self, items: list, description: str = "Loading Data"):
+        """Create progress bar for loading data items"""
+        print(f"📊 Loading data: {description}")
+        
+        results = []
+        
+        with tqdm(
+            items,
+            desc=description,
+            bar_format='{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} items',
+            colour='blue'
+        ) as pbar:
+            
+            for item in pbar:
+                # Process each item (simulate processing time)
+                time.sleep(0.05)  # Faster for data loading
+                
+                # Update description with current item info
+                pbar.set_description(f"{description} - Processing: {str(item)[:20]}...")
+                
+                results.append(item)  # Store processed item
+        
+        print(f"✅ Loaded {len(results)} items successfully!")
+        return results
+
+
+# Decorator for automatic error handling
+def handle_errors(retry_count: int = 3, delay: float = 5.0, component: str = "SYSTEM"):
+    """
+    🛡️ DECORATOR FOR AUTOMATIC ERROR HANDLING
+    Automatically catches and handles errors with retry logic
+    """
+    def decorator(func: Callable) -> Callable:
+        @wr
