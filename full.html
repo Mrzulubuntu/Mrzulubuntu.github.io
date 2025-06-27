@@ -2769,3 +2769,692 @@ def handle_errors(retry_count: int = 3, delay: float = 5.0, component: str = "SY
     """
     def decorator(func: Callable) -> Callable:
         @wr
+
+****************************** Third Continuation ******************************
+             # TradingView-like Platform: Continuation Implementation Guide
+
+## Phase 1: DuckDB Integration & Historical Data Storage (Priority 1)
+
+### 1.1 Database Schema Setup
+**File**: `apps/database/duckdb_manager.py`
+
+```python
+"""
+DuckDB Manager for OHLC and Indicators Storage
+Implements columnar storage for blazing-fast queries
+"""
+import duckdb
+import polars as pl
+from pathlib import Path
+import logging
+from datetime import datetime
+from typing import Dict, List, Optional
+import asyncio
+
+class DuckDBManager:
+    def __init__(self, base_path: str = "data/duckdb"):
+        """Initialize DuckDB manager with base storage path"""
+        self.base_path = Path(base_path)
+        self.base_path.mkdir(parents=True, exist_ok=True)
+        self.connections = {}  # Cache connections per symbol-interval
+        self.logger = logging.getLogger(__name__)
+        
+    def get_db_path(self, symbol: str, interval: str) -> Path:
+        """Generate database path for symbol-interval combination"""
+        filename = f"{symbol}_{interval}.duckdb"
+        return self.base_path / filename
+    
+    async def initialize_tables(self, symbol: str, interval: str):
+        """Create tables if they don't exist"""
+        db_path = self.get_db_path(symbol, interval)
+        
+        # Connect to DuckDB
+        conn = duckdb.connect(str(db_path))
+        
+        # Create OHLC + Indicators table
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS candles (
+                timestamp TIMESTAMP PRIMARY KEY,
+                symbol VARCHAR NOT NULL,
+                interval VARCHAR NOT NULL,
+                open DOUBLE NOT NULL,
+                high DOUBLE NOT NULL,
+                low DOUBLE NOT NULL,
+                close DOUBLE NOT NULL,
+                volume DOUBLE NOT NULL,
+                -- Technical Indicators
+                ema_9 DOUBLE,
+                ema_21 DOUBLE,
+                rsi_14 DOUBLE,
+                macd_line DOUBLE,
+                macd_signal DOUBLE,
+                macd_histogram DOUBLE,
+                bb_upper DOUBLE,
+                bb_middle DOUBLE,
+                bb_lower DOUBLE,
+                -- Metadata
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # Create indexes for fast queries
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON candles(timestamp)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_symbol_interval ON candles(symbol, interval)")
+        
+        self.connections[f"{symbol}_{interval}"] = conn
+        self.logger.info(f"✅ DuckDB initialized for {symbol}_{interval}")
+        
+    async def insert_candle(self, symbol: str, interval: str, candle_data: Dict):
+        """Insert single candle with indicators"""
+        conn_key = f"{symbol}_{interval}"
+        if conn_key not in self.connections:
+            await self.initialize_tables(symbol, interval)
+            
+        conn = self.connections[conn_key]
+        
+        # Upsert candle data
+        conn.execute("""
+            INSERT OR REPLACE INTO candles 
+            (timestamp, symbol, interval, open, high, low, close, volume,
+             ema_9, ema_21, rsi_14, macd_line, macd_signal, macd_histogram,
+             bb_upper, bb_middle, bb_lower)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, [
+            candle_data['timestamp'],
+            symbol, interval,
+            candle_data['open'], candle_data['high'], 
+            candle_data['low'], candle_data['close'], candle_data['volume'],
+            candle_data.get('ema_9'), candle_data.get('ema_21'),
+            candle_data.get('rsi_14'),
+            candle_data.get('macd_line'), candle_data.get('macd_signal'), 
+            candle_data.get('macd_histogram'),
+            candle_data.get('bb_upper'), candle_data.get('bb_middle'), 
+            candle_data.get('bb_lower')
+        ])
+        
+        self.logger.debug(f"📊 Inserted candle for {symbol}_{interval} at {candle_data['timestamp']}")
+    
+    async def get_historical_candles(self, symbol: str, interval: str, limit: int = 300) -> pl.DataFrame:
+        """Fetch last N candles using Polars for blazing speed"""
+        conn_key = f"{symbol}_{interval}"
+        if conn_key not in self.connections:
+            await self.initialize_tables(symbol, interval)
+            
+        conn = self.connections[conn_key]
+        
+        # Query using Polars for speed
+        query = f"""
+            SELECT * FROM candles 
+            WHERE symbol = '{symbol}' AND interval = '{interval}'
+            ORDER BY timestamp DESC 
+            LIMIT {limit}
+        """
+        
+        # Convert to Polars DataFrame
+        df = pl.read_database(query, conn)
+        self.logger.info(f"📈 Retrieved {len(df)} historical candles for {symbol}_{interval}")
+        
+        return df.sort("timestamp")  # Ensure chronological order
+```
+
+### 1.2 Historical Data Loader
+**File**: `apps/data/historical_loader.py`
+
+```python
+"""
+Historical Data Loader from Binance
+Populates DuckDB with historical candles for chart initialization
+"""
+import aiohttp
+import asyncio
+from datetime import datetime, timedelta
+import pandas as pd
+from typing import List, Dict
+import logging
+from tqdm.asyncio import tqdm
+import time
+
+class HistoricalDataLoader:
+    def __init__(self, duckdb_manager):
+        self.duckdb_manager = duckdb_manager
+        self.logger = logging.getLogger(__name__)
+        self.base_url = "https://api.binance.com/api/v3/klines"
+        
+    async def fetch_historical_klines(self, symbol: str, interval: str, limit: int = 1000) -> List[Dict]:
+        """Fetch historical klines from Binance API"""
+        params = {
+            'symbol': symbol,
+            'interval': interval,
+            'limit': limit
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(self.base_url, params=params) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        
+                        # Convert to OHLC format
+                        candles = []
+                        for kline in data:
+                            candle = {
+                                'timestamp': datetime.fromtimestamp(kline[0] / 1000),
+                                'open': float(kline[1]),
+                                'high': float(kline[2]),
+                                'low': float(kline[3]),
+                                'close': float(kline[4]),
+                                'volume': float(kline[5])
+                            }
+                            candles.append(candle)
+                            
+                        self.logger.info(f"📥 Fetched {len(candles)} historical candles for {symbol}_{interval}")
+                        return candles
+                        
+            except Exception as e:
+                self.logger.error(f"❌ Error fetching historical data: {e}")
+                return []
+                
+    async def calculate_indicators_batch(self, candles: List[Dict]) -> List[Dict]:
+        """Calculate all indicators for historical candles"""
+        # Convert to pandas for indicator calculation
+        df = pd.DataFrame(candles)
+        
+        # Calculate indicators (reuse your existing indicator functions)
+        # EMA calculations
+        df['ema_9'] = df['close'].ewm(span=9).mean()
+        df['ema_21'] = df['close'].ewm(span=21).mean()
+        
+        # RSI calculation
+        delta = df['close'].diff()
+        gain = (delta.where(delta > 0, 0)).ewm(span=14).mean()
+        loss = (-delta.where(delta < 0, 0)).ewm(span=14).mean()
+        df['rsi_14'] = 100 - (100 / (1 + gain / loss))
+        
+        # MACD calculation
+        exp1 = df['close'].ewm(span=12).mean()
+        exp2 = df['close'].ewm(span=26).mean()
+        df['macd_line'] = exp1 - exp2
+        df['macd_signal'] = df['macd_line'].ewm(span=9).mean()
+        df['macd_histogram'] = df['macd_line'] - df['macd_signal']
+        
+        # Bollinger Bands
+        df['bb_middle'] = df['close'].rolling(window=20).mean()
+        bb_std = df['close'].rolling(window=20).std()
+        df['bb_upper'] = df['bb_middle'] + (bb_std * 2)
+        df['bb_lower'] = df['bb_middle'] - (bb_std * 2)
+        
+        return df.to_dict('records')
+        
+    async def populate_historical_data(self, symbols: List[str], intervals: List[str]):
+        """Populate DuckDB with historical data for all symbol-interval combinations"""
+        total_combinations = len(symbols) * len(intervals)
+        
+        # Create beautiful progress bar
+        progress_chars = ['█', '▓', '▒', '░', '◆', '◇', '●', '○', '★', '☆']
+        colors = ['red', 'yellow', 'green', 'cyan', 'magenta']
+        
+        with tqdm(total=total_combinations, desc="🚀 Loading Historical Data", 
+                 bar_format='{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt}') as pbar:
+            
+            for symbol in symbols:
+                for interval in intervals:
+                    try:
+                        self.logger.info(f"📊 Processing {symbol}_{interval}...")
+                        
+                        # Fetch historical data
+                        candles = await self.fetch_historical_klines(symbol, interval, 1000)
+                        
+                        if candles:
+                            # Calculate indicators
+                            candles_with_indicators = await self.calculate_indicators_batch(candles)
+                            
+                            # Store in DuckDB
+                            for candle in candles_with_indicators:
+                                await self.duckdb_manager.insert_candle(symbol, interval, candle)
+                                
+                            self.logger.info(f"✅ Stored {len(candles_with_indicators)} candles for {symbol}_{interval}")
+                        
+                        pbar.update(1)
+                        
+                        # Rate limiting
+                        await asyncio.sleep(0.1)
+                        
+                    except Exception as e:
+                        self.logger.error(f"❌ Error processing {symbol}_{interval}: {e}")
+                        pbar.update(1)
+                        continue
+```
+
+## Phase 2: Enhanced WebSocket with Historical Loading
+
+### 2.1 Enhanced WebSocket Manager
+**File**: `apps/websocket/enhanced_ws_manager.py`
+
+```python
+"""
+Enhanced WebSocket Manager with Historical Data Integration
+Loads historical candles first, then streams live data
+"""
+import asyncio
+import websockets
+import json
+from datetime import datetime
+import logging
+from typing import Dict, List, Callable
+from apps.database.duckdb_manager import DuckDBManager
+from apps.data.historical_loader import HistoricalDataLoader
+
+class EnhancedWebSocketManager:
+    def __init__(self, on_candle_callback: Callable):
+        self.on_candle_callback = on_candle_callback
+        self.duckdb_manager = DuckDBManager()
+        self.historical_loader = HistoricalDataLoader(self.duckdb_manager)
+        self.current_symbol = None
+        self.current_interval = None
+        self.websocket = None
+        self.logger = logging.getLogger(__name__)
+        self.is_connected = False
+        
+    async def initialize_chart_with_history(self, symbol: str, interval: str):
+        """Load historical data first, then start live streaming"""
+        self.logger.info(f"🔄 Initializing chart for {symbol}_{interval}")
+        
+        try:
+            # 1. Load historical candles from DuckDB
+            historical_df = await self.duckdb_manager.get_historical_candles(
+                symbol, interval, limit=300
+            )
+            
+            # 2. If no historical data, fetch from Binance API
+            if len(historical_df) == 0:
+                self.logger.warning(f"📭 No historical data found, fetching from Binance...")
+                await self.historical_loader.populate_historical_data([symbol], [interval])
+                historical_df = await self.duckdb_manager.get_historical_candles(
+                    symbol, interval, limit=300
+                )
+            
+            # 3. Stream historical candles to frontend (fast replay)
+            self.logger.info(f"📈 Streaming {len(historical_df)} historical candles...")
+            for row in historical_df.iter_rows(named=True):
+                candle_data = {
+                    'timestamp': row['timestamp'],
+                    'symbol': row['symbol'],
+                    'interval': row['interval'],
+                    'open': row['open'],
+                    'high': row['high'],
+                    'low': row['low'],
+                    'close': row['close'],
+                    'volume': row['volume'],
+                    'indicators': {
+                        'ema_9': row['ema_9'],
+                        'ema_21': row['ema_21'],
+                        'rsi_14': row['rsi_14'],
+                        'macd_line': row['macd_line'],
+                        'macd_signal': row['macd_signal'],
+                        'macd_histogram': row['macd_histogram'],
+                        'bb_upper': row['bb_upper'],
+                        'bb_middle': row['bb_middle'],
+                        'bb_lower': row['bb_lower']
+                    },
+                    'is_historical': True
+                }
+                
+                # Send to frontend
+                await self.on_candle_callback(candle_data)
+                
+                # Small delay for smooth loading animation
+                await asyncio.sleep(0.01)
+            
+            self.logger.info(f"✅ Historical data loaded, starting live stream...")
+            
+            # 4. Start live WebSocket connection
+            await self.start_live_stream(symbol, interval)
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error initializing chart: {e}")
+            
+    async def start_live_stream(self, symbol: str, interval: str):
+        """Start live WebSocket streaming from Binance"""
+        self.current_symbol = symbol
+        self.current_interval = interval
+        
+        stream_name = f"{symbol.lower()}@kline_{interval}"
+        ws_url = f"wss://stream.binance.com:9443/ws/{stream_name}"
+        
+        try:
+            self.websocket = await websockets.connect(ws_url)
+            self.is_connected = True
+            self.logger.info(f"🔗 Connected to live stream: {stream_name}")
+            
+            async for message in self.websocket:
+                if not self.is_connected:
+                    break
+                    
+                data = json.loads(message)
+                await self.process_live_candle(data)
+                
+        except Exception as e:
+            self.logger.error(f"❌ WebSocket error: {e}")
+            self.is_connected = False
+            
+    async def process_live_candle(self, data: Dict):
+        """Process live candle data and store in DuckDB"""
+        try:
+            kline = data['k']
+            
+            candle_data = {
+                'timestamp': datetime.fromtimestamp(kline['t'] / 1000),
+                'symbol': kline['s'],
+                'interval': kline['i'],
+                'open': float(kline['o']),
+                'high': float(kline['h']),
+                'low': float(kline['l']),
+                'close': float(kline['c']),
+                'volume': float(kline['v']),
+                'is_historical': False
+            }
+            
+            # Calculate indicators (implement your existing logic)
+            candle_data['indicators'] = await self.calculate_live_indicators(candle_data)
+            
+            # Store in DuckDB
+            await self.duckdb_manager.insert_candle(
+                candle_data['symbol'], 
+                candle_data['interval'], 
+                {**candle_data, **candle_data['indicators']}
+            )
+            
+            # Send to frontend
+            await self.on_candle_callback(candle_data)
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error processing live candle: {e}")
+            
+    async def switch_symbol_interval(self, symbol: str, interval: str):
+        """Clean switch to new symbol/interval"""
+        self.logger.info(f"🔄 Switching to {symbol}_{interval}")
+        
+        # 1. Close existing connection
+        if self.websocket and self.is_connected:
+            await self.websocket.close()
+            self.is_connected = False
+            
+        # 2. Initialize new chart with history
+        await self.initialize_chart_with_history(symbol, interval)
+```
+
+## Phase 3: Symbol & Interval Selector UI
+
+### 3.1 Enhanced Frontend Controls
+**File**: `templates/trading/chart.html` (additions)
+
+```html
+<!-- Enhanced Symbol & Interval Selector -->
+<div class="control-panel" style="position: fixed; top: 20px; left: 20px; z-index: 1000; 
+     background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+     
+    <!-- Symbol Selector -->
+    <div class="selector-group">
+        <label for="symbolSelector">📊 Symbol:</label>
+        <select id="symbolSelector" class="form-control" style="width: 120px; display: inline-block;">
+            <option value="BTCUSDT">BTC/USDT</option>
+            <option value="ETHUSDT">ETH/USDT</option>
+            <option value="BNBUSDT">BNB/USDT</option>
+            <option value="ADAUSDT">ADA/USDT</option>
+            <option value="SOLUSDT">SOL/USDT</option>
+        </select>
+    </div>
+    
+    <!-- Interval Selector -->
+    <div class="selector-group" style="margin-left: 10px;">
+        <label for="intervalSelector">⏱️ Interval:</label>
+        <select id="intervalSelector" class="form-control" style="width: 80px; display: inline-block;">
+            <!-- Ticks -->
+            <optgroup label="Ticks">
+                <option value="1tick">1 Tick</option>
+                <option value="10tick">10 Ticks</option>
+                <option value="100tick">100 Ticks</option>
+                <option value="1000tick">1000 Ticks</option>
+            </optgroup>
+            
+            <!-- Seconds -->
+            <optgroup label="Seconds">
+                <option value="1s">1s</option>
+                <option value="3s">3s</option>
+                <option value="5s">5s</option>
+                <option value="15s">15s</option>
+                <option value="30s">30s</option>
+            </optgroup>
+            
+            <!-- Minutes -->
+            <optgroup label="Minutes">
+                <option value="1m" selected>1m</option>
+                <option value="3m">3m</option>
+                <option value="5m">5m</option>
+                <option value="15m">15m</option>
+                <option value="30m">30m</option>
+                <option value="45m">45m</option>
+            </optgroup>
+            
+            <!-- Hours -->
+            <optgroup label="Hours">
+                <option value="1h">1h</option>
+                <option value="2h">2h</option>
+                <option value="3h">3h</option>
+                <option value="4h">4h</option>
+                <option value="6h">6h</option>
+                <option value="12h">12h</option>
+            </optgroup>
+            
+            <!-- Days & Beyond -->
+            <optgroup label="Days+">
+                <option value="1d">1D</option>
+                <option value="1w">1W</option>
+                <option value="1M">1M</option>
+                <option value="3M">3M</option>
+                <option value="6M">6M</option>
+                <option value="1y">1Y</option>
+            </optgroup>
+            
+            <!-- Ranges -->
+            <optgroup label="Ranges">
+                <option value="1R">1R</option>
+                <option value="10R">10R</option>
+                <option value="100R">100R</option>
+                <option value="1000R">1000R</option>
+            </optgroup>
+        </select>
+    </div>
+    
+    <!-- Apply Button -->
+    <button id="applySelection" class="btn btn-primary" style="margin-left: 10px;">
+        🚀 Apply
+    </button>
+    
+    <!-- Loading Indicator -->
+    <div id="loadingIndicator" style="display: none; margin-left: 10px;">
+        <div class="spinner-border spinner-border-sm" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+        <span style="margin-left: 5px;">Loading...</span>
+    </div>
+</div>
+
+<!-- Enhanced JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const symbolSelector = document.getElementById('symbolSelector');
+    const intervalSelector = document.getElementById('intervalSelector');
+    const applyButton = document.getElementById('applySelection');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    
+    // Apply selection
+    applyButton.addEventListener('click', async function() {
+        const symbol = symbolSelector.value;
+        const interval = intervalSelector.value;
+        
+        console.log(`🔄 Switching to ${symbol} ${interval}`);
+        
+        // Show loading
+        loadingIndicator.style.display = 'inline-block';
+        applyButton.disabled = true;
+        
+        try {
+            // Send switch request to backend
+            await fetch('/api/switch-symbol-interval/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    symbol: symbol,
+                    interval: interval
+                })
+            });
+            
+            // Clear existing chart data
+            if (window.chartManager) {
+                window.chartManager.clearAllCharts();
+            }
+            
+        } catch (error) {
+            console.error('❌ Error switching symbol/interval:', error);
+        } finally {
+            // Hide loading
+            loadingIndicator.style.display = 'none';
+            applyButton.disabled = false;
+        }
+    });
+    
+    // Save preferences to localStorage
+    function savePreferences() {
+        localStorage.setItem('tradingPreferences', JSON.stringify({
+            symbol: symbolSelector.value,
+            interval: intervalSelector.value,
+            timestamp: Date.now()
+        }));
+    }
+    
+    // Load preferences from localStorage
+    function loadPreferences() {
+        const saved = localStorage.getItem('tradingPreferences');
+        if (saved) {
+            const prefs = JSON.parse(saved);
+            symbolSelector.value = prefs.symbol || 'BTCUSDT';
+            intervalSelector.value = prefs.interval || '1m';
+        }
+    }
+    
+    // Auto-save preferences
+    symbolSelector.addEventListener('change', savePreferences);
+    intervalSelector.addEventListener('change', savePreferences);
+    
+    // Load saved preferences on page load
+    loadPreferences();
+});
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+```
+
+## Phase 4: Indicator Toggle UI & Persistence
+
+### 4.1 Indicator Control Panel
+**File**: `templates/trading/indicator_controls.html`
+
+```html
+<!-- Indicator Control Panel -->
+<div class="indicator-panel" style="position: fixed; top: 20px; right: 20px; z-index: 1000;
+     background: rgba(42, 42, 42, 0.95); color: white; padding: 20px; border-radius: 8px; 
+     box-shadow: 0 4px 12px rgba(0,0,0,0.3); min-width: 250px;">
+     
+    <h5 style="margin-bottom: 15px; color: #00d4aa;">🧩 Indicators</h5>
+    
+    <!-- Main Chart Indicators -->
+    <div class="indicator-group">
+        <h6 style="color: #ccc; margin-bottom: 10px;">📈 Main Chart</h6>
+        
+        <!-- EMA Controls -->
+        <div class="indicator-item" style="margin-bottom: 10px;">
+            <label class="switch" style="display: flex; align-items: center;">
+                <input type="checkbox" id="emaToggle" checked>
+                <span class="slider round" style="margin-right: 10px;"></span>
+                <span>EMA (9, 21)</span>
+            </label>
+            <div class="indicator-params" id="emaParams" style="margin-left: 25px; margin-top: 5px;">
+                <input type="number" id="emaFast" value="9" min="1" max="50" style="width: 50px; margin-right: 5px;">
+                <input type="number" id="emaSlow" value="21" min="1" max="100" style="width: 50px;">
+            </div>
+        </div>
+        
+        <!-- Bollinger Bands -->
+        <div class="indicator-item" style="margin-bottom: 10px;">
+            <label class="switch" style="display: flex; align-items: center;">
+                <input type="checkbox" id="bbToggle" checked>
+                <span class="slider round" style="margin-right: 10px;"></span>
+                <span>Bollinger Bands</span>
+            </label>
+            <div class="indicator-params" id="bbParams" style="margin-left: 25px; margin-top: 5px;">
+                <label style="font-size: 11px;">Period:</label>
+                <input type="number" id="bbPeriod" value="20" min="5" max="50" style="width: 50px; margin-right: 10px;">
+                <label style="font-size: 11px;">StdDev:</label>
+                <input type="number" id="bbStdDev" value="2" min="1" max="5" step="0.1" style="width: 50px;">
+            </div>
+        </div>
+    </div>
+    
+    <!-- Oscillator Indicators -->
+    <div class="indicator-group" style="margin-top: 15px;">
+        <h6 style="color: #ccc; margin-bottom: 10px;">📊 Oscillators</h6>
+        
+        <!-- RSI -->
+        <div class="indicator-item" style="margin-bottom: 10px;">
+            <label class="switch" style="display: flex; align-items: center;">
+                <input type="checkbox" id="rsiToggle" checked>
+                <span class="slider round" style="margin-right: 10px;"></span>
+                <span>RSI</span>
+            </label>
+            <div class="indicator-params" id="rsiParams" style="margin-left: 25px; margin-top: 5px;">
+                <label style="font-size: 11px;">Period:</label>
+                <input type="number" id="rsiPeriod" value="14" min="2" max="50" style="width: 50px;">
+            </div>
+        </div>
+        
+        <!-- MACD -->
+        <div class="indicator-item" style="margin-bottom: 10px;">
+            <label class="switch" style="display: flex; align-items: center;">
+                <input type="checkbox" id="macdToggle" checked>
+                <span class="slider round" style="margin-right: 10px;"></span>
+                <span>MACD</span>
+            </label>
+            <div class="indicator-params" id="macdParams" style="margin-left: 25px; margin-top: 5px;">
+                <input type="number" id="macdFast" value="12" min="1" max="50" style="width: 40px; margin-right: 3px;">
+                <input type="number" id="macdSlow" value="26" min="1" max="100" style="width: 40px; margin-right: 3px;">
+                <input type="number" id="macdSignal" value="9" min="1" max="30" style="width: 40px;">
+            </div>
+        </div>
+        
+        <!-- Stochastic -->
+        <div class="indicator-item" style="margin-bottom: 10px;">
+            <label class="switch" style="display: flex; align-items: center;">
+                <input type="checkbox" id="stochToggle">
+                <span class="slider round" style="margin-right: 10px;"></span>
+                <span>Stochastic</span>
+            </label>
+            <div class="indicator-params" id="stochParams" style="margin-left: 25px; margin-top: 5px; display: none;">
+                <label style="font-size: 11px;">%K:</label>
+                <input type="number" i
