@@ -1580,3 +1580,773 @@ classclass  BinanceWebSocketManagerBinanceWebSocketManager ::
                 printprint((f"🔌 Connecting to f"🔌 Connecting to {{symbolsymbol}}  {{intervalinterval}} stream..." stream..."))
                 
                 # 🔄# 🔄
+
+
+        *********** First continuation **********************
+TradingView-like Platform: Continuation Implementation Guide
+Current Status Assessment
+Based on your screenshots, you've successfully implemented:
+✅ Real-time WebSocket data streaming from Binance
+✅ Multi-pane chart layout (Main, RSI, MACD panes)
+✅ Technical indicators calculation (RSI, MACD, EMA, Bollinger Bands)
+✅ Time synchronization across panes
+✅ Basic symbol and interval selection
+Phase 1: Immediate Improvements & Bug Fixes
+1.1 Clean Up the UI Layout
+Current Issue: The interface shows overlapping text and data streams Solution: Implement proper CSS
+styling and layout management
+1.2 Implement DuckDB Data Persistence
+Priority: High - This is missing from your current implementationhtml
+<!-- templates/trading/chart.html --> <!-- templates/trading/chart.html -->
+<<divdiv  classclass==""trading-container trading-container"">>
+        <<divdiv  classclass==""header-controlsheader-controls"">>
+                <<divdiv  classclass==""symbol-selectorsymbol-selector"">>
+                        <<selectselect  idid==""symbol-dropdownsymbol-dropdown"">>
+                                <<optionoption  valuevalue==""BTCUSDTBTCUSDT"">>BTCUSDTBTCUSDT</</optionoption>>
+                                <<optionoption  valuevalue==""ETHUSDTETHUSDT"">>ETHUSDTETHUSDT</</optionoption>>
+                                <<optionoption  valuevalue==""BNBUSDTBNBUSDT"">>BNBUSDTBNBUSDT</</optionoption>>
+                        </</selectselect>>
+                </</divdiv>>
+                <<divdiv  classclass==""interval-selector interval-selector"">>
+                        <<selectselect  idid==""interval-dropdown interval-dropdown"">>
+                                <<optionoption  valuevalue==""1m1m"">>1m1m</</optionoption>>
+                                <<optionoption  valuevalue==""3m3m"">>3m3m</</optionoption>>
+                                <<optionoption  valuevalue==""5m5m"">>5m5m</</optionoption>>
+                                <<optionoption  valuevalue==""15m15m"">>15m15m</</optionoption>>
+                                <<optionoption  valuevalue==""30m30m"">>30m30m</</optionoption>>
+                                <<optionoption  valuevalue==""1h1h"">>1h1h</</optionoption>>
+                                <<optionoption  valuevalue==""4h4h"">>4h4h</</optionoption>>
+                                <<optionoption  valuevalue==""1d1d"">>1d1d</</optionoption>>
+                        </</selectselect>>
+                </</divdiv>>
+        </</divdiv>>
+        
+        <<divdiv  classclass==""chart-containerchart-container"">>
+                <<divdiv  classclass==""main-chart-panemain-chart-pane""  idid==""main-chartmain-chart"">></</divdiv>>
+                <<divdiv  classclass==""indicator-panesindicator-panes"">>
+                        <<divdiv  classclass==""rsi-panersi-pane""  idid==""rsi-chartrsi-chart"">></</divdiv>>
+                        <<divdiv  classclass==""macd-panemacd-pane""  idid==""macd-chartmacd-chart"">></</divdiv>>
+                </</divdiv>>
+        </</divdiv>>
+        
+        <<divdiv  classclass==""sidebar-panelsidebar-panel""  idid==""sidebarsidebar"">>
+                <!-- Symbol info, price, change % --> <!-- Symbol info, price, change % -->
+        </</divdiv>>
+</</divdiv>>
+
+python
+# apps/trading/models.py # apps/trading/models.py
+importimport duckdb duckdb
+importimport polars  polars asas pl pl
+fromfrom pathlib  pathlib importimport Path Path
+importimport logging logging
+fromfrom typing  typing importimport Dict Dict,, List List,, Optional Optional
+fromfrom datetime  datetime importimport datetime datetime
+classclass  DuckDBManager DuckDBManager::
+        """"""
+    🦆 DuckDB Manager for OHLC + Technical Indicators Storage     🦆 DuckDB Manager for OHLC + Technical Indicators Storage
+        
+    Each symbol+interval combination gets its own .duckdb file     Each symbol+interval combination gets its own .duckdb file
+    Structure: timestamp, symbol, interval, open, high, low, close,     Structure: timestamp, symbol, interval, open, high, low, close, 
+              ema_20, rsi_14, macd_line, macd_signal, bb_upper, bb_lower               ema_20, rsi_14, macd_line, macd_signal, bb_upper, bb_lower
+    """    """
+        
+        defdef  __init____init__((selfself,, data_dir data_dir::  strstr  ==  "data/duckdb""data/duckdb"))::
+        self        self..data_dir data_dir == Path Path((data_dirdata_dir))
+        self        self..data_dirdata_dir..mkdirmkdir((parentsparents==TrueTrue,, exist_ok exist_ok==TrueTrue))
+        self        self..connectionsconnections:: Dict Dict[[strstr,, duckdb duckdb..DuckDBPyConnection DuckDBPyConnection]]  ==  {{}}
+                
+                # 🎨 Beautiful progress bar setup # 🎨 Beautiful progress bar setup
+        self        self..progress_styles progress_styles ==  [['[|||||| {}]''[|||||| {}]',,  '[██████ {}]''[██████ {}]',,  '[★★★★★ {}]''[★★★★★ {}]',,  '[♦♦♦♦♦ {}'[♦♦♦♦♦ {}
+                
+                printprint(("🦆 DuckDB Manager initialized successfully!" "🦆 DuckDB Manager initialized successfully!"))
+                printprint((f"📁 Data directory: f"📁 Data directory: {{selfself..data_dirdata_dir..absoluteabsolute(())}}""))
+        
+        defdef  get_connectionget_connection((selfself,, symbol symbol::  strstr,, interval interval::  strstr))  -->> duckdb duckdb..DuckDBPyConnection DuckDBPyConnection::
+                """"""
+        Get or create DuckDB connection for specific symbol+interval         Get or create DuckDB connection for specific symbol+interval
+                
+        Args:        Args:
+            symbol: Trading symbol (e.g., 'BTCUSDT')             symbol: Trading symbol (e.g., 'BTCUSDT')
+            interval: Time interval (e.g., '1m', '5m', '1h')             interval: Time interval (e.g., '1m', '5m', '1h')
+                        
+        Returns:        Returns:
+            DuckDB connection instance             DuckDB connection instance
+        """        """
+        key         key ==  f"f"{{symbolsymbol}}__{{intervalinterval}}""
+                
+                ifif key  key notnot  inin self self..connectionsconnections::
+            db_path             db_path == self self..data_dir data_dir //  f"f"{{keykey}}.duckdb".duckdb"
+            conn             conn == duckdb duckdb..connectconnect((strstr((db_pathdb_path))))
+                        
+                        # 🏗 Create table if not exists # 🏗 Create table if not exists
+            conn            conn..executeexecute((""""""
+                CREATE TABLE IF NOT EXISTS ohlc_indicators (                 CREATE TABLE IF NOT EXISTS ohlc_indicators (
+                    timestamp TIMESTAMP PRIMARY KEY,                     timestamp TIMESTAMP PRIMARY KEY,
+                    symbol VARCHAR NOT NULL,                     symbol VARCHAR NOT NULL,
+                    interval VARCHAR NOT NULL,                     interval VARCHAR NOT NULL,
+                    open DOUBLE NOT NULL,                     open DOUBLE NOT NULL,
+                    high DOUBLE NOT NULL,                     high DOUBLE NOT NULL,
+                    low DOUBLE NOT NULL,                     low DOUBLE NOT NULL,
+                    close DOUBLE NOT NULL,                     close DOUBLE NOT NULL,
+                    volume DOUBLE NOT NULL,                     volume DOUBLE NOT NULL,
+                    ema_20 DOUBLE,                     ema_20 DOUBLE,
+                    rsi_14 DOUBLE,                     rsi_14 DOUBLE,
+                    macd_line DOUBLE,                     macd_line DOUBLE,
+                    macd_signal DOUBLE,                     macd_signal DOUBLE,
+                    macd_histogram DOUBLE,                     macd_histogram DOUBLE,
+                    bb_upper DOUBLE,                     bb_upper DOUBLE,
+                    bb_middle DOUBLE,                     bb_middle DOUBLE,
+                    bb_lower DOUBLE,                     bb_lower DOUBLE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )                 )
+            """            """))
+                        
+            self            self..connectionsconnections[[keykey]]  == conn conn
+                        printprint((f"📊 Created DuckDB table for f"📊 Created DuckDB table for {{symbolsymbol}}  {{intervalinterval}}""))
+                        
+                returnreturn self self..connectionsconnections[[keykey]]
+        
+        defdef  insert_candle_data insert_candle_data((selfself,, symbol symbol::  strstr,, interval interval::  strstr,, candle_data candle_data:: Dict Dict))::
+                """"""
+        Insert OHLC + indicators data into DuckDB         Insert OHLC + indicators data into DuckDB
+                
+        Args:        Args:
+            symbol: Trading symbol             symbol: Trading symbol
+            interval: Time interval              interval: Time interval  
+            candle_data: Dictionary containing OHLC + indicator values             candle_data: Dictionary containing OHLC + indicator values
+        """        """
+        conn         conn == self self..get_connectionget_connection((symbolsymbol,, interval interval))
+                
+                trytry::
+            conn            conn..executeexecute((""""""
+                INSERT OR REPLACE INTO ohlc_indicators                 INSERT OR REPLACE INTO ohlc_indicators 
+                (timestamp, symbol, interval, open, high, low, close, volume,                 (timestamp, symbol, interval, open, high, low, close, volume,
+                 ema_20, rsi_14, macd_line, macd_signal, macd_histogram,                  ema_20, rsi_14, macd_line, macd_signal, macd_histogram,
+                 bb_upper, bb_middle, bb_lower)                  bb_upper, bb_middle, bb_lower)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """            """,,  ((
+                candle_data                 candle_data[['timestamp''timestamp']],,
+                symbol                 symbol,,
+                interval                 interval,,
+                candle_data                 candle_data[['open''open']],,
+                candle_data                 candle_data[['high''high']],,  
+                candle_data                 candle_data[['low''low']],,
+                candle_data                 candle_data[['close''close']],,
+                candle_data                 candle_data[['volume''volume']],,
+                candle_data                 candle_data..getget(('ema_20''ema_20')),,
+                candle_data                 candle_data..getget(('rsi_14''rsi_14')),,
+                candle_data                 candle_data..getget(('macd_line''macd_line')),,
+                candle_data                 candle_data..getget(('macd_signal''macd_signal')),,
+                candle_data                 candle_data..getget(('macd_histogram''macd_histogram')),,
+                candle_data                 candle_data..getget(('bb_upper''bb_upper')),,
+                candle_data                 candle_data..getget(('bb_middle''bb_middle')),,
+                candle_data                 candle_data..getget(('bb_lower''bb_lower'))
+                        ))))
+                        
+                        printprint((f"💾 Saved f"💾 Saved {{symbolsymbol}}  {{intervalinterval}} candle at  candle at {{candle_datacandle_data[['timestamp''timestamp']]}}""
+                        
+                exceptexcept Exception  Exception asas e e::
+            logging             logging..errorerror((f"❌ Error inserting candle data: f"❌ Error inserting candle data: {{ee}}""))
+                        # 📧 Email notification setup (commented for now) # 📧 Email notification setup (commented for now)
+                        # self.send_error_notification(f"DuckDB Insert Error: {e}") # self.send_error_notification(f"DuckDB Insert Error: {e}")
+        
+        defdef  get_historical_candles get_historical_candles((selfself,, symbol symbol::  strstr,, interval interval::  strstr,, limit limit::  intint  ==  300300))  -->>  
+                """"""
+        Fetch historical candles using Polars for blazing speed         Fetch historical candles using Polars for blazing speed
+                
+        Args:        Args:
+            symbol: Trading symbol             symbol: Trading symbol
+            interval: Time interval             interval: Time interval
+1.3 Enhanced WebSocket Handler with DuckDB Integration            limit: Number of recent candles to fetch             limit: Number of recent candles to fetch
+                        
+        Returns:        Returns:
+            Polars DataFrame with historical data             Polars DataFrame with historical data
+        """        """
+        conn         conn == self self..get_connectionget_connection((symbolsymbol,, interval interval))
+                
+        query         query ==  f"""f"""
+            SELECT * FROM ohlc_indicators             SELECT * FROM ohlc_indicators 
+            WHERE symbol = '             WHERE symbol = '{{symbolsymbol}}' AND interval = ' ' AND interval = '{{intervalinterval}}''
+            ORDER BY timestamp DESC             ORDER BY timestamp DESC 
+            LIMIT             LIMIT {{limitlimit}}
+        """        """
+                
+                # 🚀 Use Polars for lightning-fast data processing # 🚀 Use Polars for lightning-fast data processing
+        df         df == pl pl..read_databaseread_database((queryquery,, conn conn))
+                
+                ifif  notnot df df..is_emptyis_empty(())::
+                        printprint((f"📈 Loaded f"📈 Loaded {{lenlen((dfdf))}} historical candles for  historical candles for {{symbolsymbol}}  {{intervalinterval}}""))
+                        returnreturn df df..sortsort(('timestamp''timestamp'))
+                elseelse::
+                        printprint((f"📊 No historical data found for f"📊 No historical data found for {{symbolsymbol}}  {{intervalinterval}}""))
+                        returnreturn pl pl..DataFrameDataFrame(())
+python
+# apps/trading/websocket_handler.py # apps/trading/websocket_handler.py
+importimport asyncio asyncio
+importimport json json
+importimport websockets websockets
+fromfrom channels channels..genericgeneric..websocket websocket importimport AsyncWebsocketConsumer  AsyncWebsocketConsumer
+fromfrom  ..models models importimport DuckDBManager DuckDBManager
+fromfrom  ..indicators indicators importimport TechnicalIndicators  TechnicalIndicators
+importimport logging logging
+fromfrom typing  typing importimport Dict Dict,, List List
+importimport time time
+fromfrom tqdm  tqdm importimport tqdm tqdm
+importimport random random
+classclass  TradingWebSocketConsumer TradingWebSocketConsumer((AsyncWebsocketConsumer AsyncWebsocketConsumer))::
+        """"""
+    🚀 Enhanced WebSocket Consumer with DuckDB persistence     🚀 Enhanced WebSocket Consumer with DuckDB persistence
+    Handles real-time Binance data + technical indicators     Handles real-time Binance data + technical indicators
+    """    """
+        
+        defdef  __init____init__((selfself,,  **argsargs,,  ****kwargskwargs))::
+                supersuper(())..__init____init__((**argsargs,,  ****kwargskwargs))
+        self        self..duckdb_manager duckdb_manager == DuckDBManager DuckDBManager(())
+        self        self..indicators indicators == TechnicalIndicators  TechnicalIndicators(())
+        self        self..binance_ws binance_ws ==  NoneNone
+        self        self..current_symbol current_symbol ==  "BTCUSDT""BTCUSDT"
+        self        self..current_interval current_interval ==  "1m""1m"
+                
+                # 🎨 Progress bar customization # 🎨 Progress bar customization
+        self        self..progress_colors progress_colors ==  [['\033[91m''\033[91m',,  '\033[93m''\033[93m',,  '\033[92m''\033[92m',,  '\033[94m''\033[94m',,  '\033[9'\033[9
+        self        self..progress_styles progress_styles ==  [['[|||||| {}]''[|||||| {}]',,  '[██████ {}]''[██████ {}]',,  '[★★★★★ {}]''[★★★★★ {}]']]
+                
+                printprint(("🚀 Trading WebSocket Consumer initialized!" "🚀 Trading WebSocket Consumer initialized!"))
+        
+        asyncasync  defdef  connectconnect((selfself))::
+                """Accept WebSocket connection and load historical data""" """Accept WebSocket connection and load historical data"""
+                awaitawait self self..acceptaccept(())
+                
+                printprint(("🔌 WebSocket connection established" "🔌 WebSocket connection established"))
+                
+                # 📊 Load historical data first # 📊 Load historical data first
+                awaitawait self self..load_historical_data load_historical_data(())
+                
+                # 🔄 Start Binance WebSocket connection # 🔄 Start Binance WebSocket connection
+                awaitawait self self..start_binance_stream start_binance_stream(())
+        
+        asyncasync  defdef  disconnectdisconnect((selfself,, close_code close_code))::
+                """Clean disconnection with proper teardown""" """Clean disconnection with proper teardown"""
+                printprint((f"🔌 WebSocket disconnecting with code: f"🔌 WebSocket disconnecting with code: {{close_codeclose_code}}""))
+                
+                ifif self self..binance_wsbinance_ws::
+                        awaitawait self self..binance_wsbinance_ws..closeclose(())
+                        printprint(("🔒 Binance WebSocket connection closed" "🔒 Binance WebSocket connection closed"))
+        
+        asyncasync  defdef  receivereceive((selfself,, text_data text_data))::
+                """Handle incoming WebSocket messages""" """Handle incoming WebSocket messages"""
+                trytry::
+            data             data == json json..loadsloads((text_datatext_data))
+            message_type             message_type == data data..getget(('type''type'))
+                        
+                        ifif message_type  message_type ====  'symbol_change''symbol_change'::
+                                awaitawait self self..change_symbolchange_symbol((datadata[['symbol''symbol']],, data data[['interval''interval']]))
+                        elifelif message_type  message_type ====  'replay_start''replay_start'::
+                                awaitawait self self..start_replaystart_replay((datadata))
+                        elifelif message_type  message_type ====  'toggle_indicator' 'toggle_indicator'::
+                                awaitawait self self..toggle_indicatortoggle_indicator((datadata[['indicator''indicator']],, data data[['enabled''enabled']]))
+                                
+                exceptexcept json json..JSONDecodeError JSONDecodeError asas e e::
+            logging             logging..errorerror((f"❌ JSON decode error: f"❌ JSON decode error: {{ee}}""))
+                exceptexcept Exception  Exception asas e e::
+            logging             logging..errorerror((f"❌ WebSocket receive error: f"❌ WebSocket receive error: {{ee}}""))
+        
+        asyncasync  defdef  load_historical_data load_historical_data((selfself))::
+                """"""
+        🔄 Load historical candles from DuckDB on chart startup         🔄 Load historical candles from DuckDB on chart startup
+        Provides instant chart population before live data begins         Provides instant chart population before live data begins
+        """        """
+                printprint((f"📊 Loading historical data for f"📊 Loading historical data for {{selfself..current_symbolcurrent_symbol}}  {{selfself..current_intcurrent_int
+                
+                # Get historical data using Polars # Get historical data using Polars
+        df         df == self self..duckdb_managerduckdb_manager..get_historical_candles get_historical_candles((
+            self            self..current_symbolcurrent_symbol,,  
+            self            self..current_intervalcurrent_interval,,  
+            limit             limit==300300
+                ))
+                
+                ifif  notnot df df..is_emptyis_empty(())::
+                        # 🎨 Beautiful progress bar for historical data loading # 🎨 Beautiful progress bar for historical data loading
+            progress_style             progress_style == random random..choicechoice((selfself..progress_stylesprogress_styles))
+            color             color == random random..choicechoice((selfself..progress_colorsprogress_colors))
+                        
+                        withwith tqdm tqdm((totaltotal==lenlen((dfdf)),, desc desc==f"f"{{colorcolor}}📈 Loading History" 📈 Loading History",,  
+                     bar_format                      bar_format==progress_styleprogress_style))  asas pbar pbar::
+                                
+                                forfor row  row inin df df..iter_rowsiter_rows((namednamed==TrueTrue))::
+                                        # Send historical candle to frontend # Send historical candle to frontend
+                                        awaitawait self self..sendsend((text_datatext_data==jsonjson..dumpsdumps(({{
+                                                'type''type'::  'historical_candle' 'historical_candle',,
+                                                'data''data'::  {{
+                                                        'timestamp''timestamp':: row row[['timestamp''timestamp']]..isoformatisoformat(()),,
+                                                        'open''open':: row row[['open''open']],,
+                                                        'high''high':: row row[['high''high']],,  
+                                                        'low''low':: row row[['low''low']],,
+                                                        'close''close':: row row[['close''close']],,
+                                                        'volume''volume':: row row[['volume''volume']],,
+                                                        'indicators''indicators'::  {{
+                                                                'ema_20''ema_20':: row row[['ema_20''ema_20']],,
+                                                                'rsi_14''rsi_14':: row row[['rsi_14''rsi_14']],,
+                                                                'macd''macd'::  {{
+                                                                        'macd''macd':: row row[['macd_line''macd_line']],,
+                                                                        'signal''signal':: row row[['macd_signal''macd_signal']],,
+                                                                        'histogram''histogram':: row row[['macd_histogram''macd_histogram']]
+                                                                }},,
+                                                                'bollinger''bollinger'::  {{
+                                                                        'upper''upper':: row row[['bb_upper''bb_upper']],,
+                                                                        'middle''middle':: row row[['bb_middle''bb_middle']],,
+                                                                        'lower''lower':: row row[['bb_lower''bb_lower']]
+                                                                }}
+                                                        }}
+                                                }}
+                                        }}))))
+                                        
+                    pbar                     pbar..updateupdate((11))
+                                        awaitawait asyncio asyncio..sleepsleep((0.010.01))    # Smooth loading animation # Smooth loading animation
+                        
+                        printprint((f"✅ Historical data loaded: f"✅ Historical data loaded: {{lenlen((dfdf))}} candles" candles"))
+                elseelse::
+                        printprint(("📊 No historical data available, starting fresh" "📊 No historical data available, starting fresh"))
+        
+        asyncasync  defdef  start_binance_stream start_binance_stream((selfself))::
+                """"""
+        🔄 Start real-time Binance WebSocket stream         🔄 Start real-time Binance WebSocket stream
+        Continues after historical data is loaded         Continues after historical data is loaded
+        """        """
+        stream_url         stream_url ==  f"wss://stream.binance.com:9443/ws/ f"wss://stream.binance.com:9443/ws/{{selfself..current_symbolcurrent_symbol..lowerlower(())}}@@
+                
+                printprint((f"🔄 Starting Binance stream: f"🔄 Starting Binance stream: {{stream_urlstream_url}}""))
+                
+                trytry::
+                        asyncasync  withwith websockets websockets..connectconnect((stream_urlstream_url))  asas websocket websocket::
+                self                 self..binance_ws binance_ws == websocket websocket
+                                printprint(("✅ Connected to Binance WebSocket" "✅ Connected to Binance WebSocket"))
+                                
+                                asyncasync  forfor message  message inin websocket websocket::
+                                        awaitawait self self..process_binance_message process_binance_message((messagemessage))
+                                        
+                exceptexcept Exception  Exception asas e e::
+            logging             logging..errorerror((f"❌ Binance WebSocket error: f"❌ Binance WebSocket error: {{ee}}""))
+                        # 🔄 Retry connection after delay # 🔄 Retry connection after delay
+                        awaitawait asyncio asyncio..sleepsleep((55))
+                        awaitawait self self..start_binance_stream start_binance_stream(())
+        
+        asyncasync  defdef  process_binance_message process_binance_message((selfself,, message message::  strstr))::
+                """"""
+        Process incoming Binance kline data         Process incoming Binance kline data
+        Calculate indicators and persist to DuckDB         Calculate indicators and persist to DuckDB
+        """        """
+                trytry::
+            data             data == json json..loadsloads((messagemessage))
+            kline             kline == data data[['k''k']]
+                        
+                        # Extract OHLCV data # Extract OHLCV data
+            candle_data             candle_data ==  {{
+                                'timestamp''timestamp':: pd pd..to_datetimeto_datetime((klinekline[['t''t']],, unit unit=='ms''ms')),,
+                                'open''open'::  floatfloat((klinekline[['o''o']])),,
+                                'high''high'::  floatfloat((klinekline[['h''h']])),,
+                                'low''low'::  floatfloat((klinekline[['l''l']])),,
+                                'close''close'::  floatfloat((klinekline[['c''c']])),,
+                                'volume''volume'::  floatfloat((klinekline[['v''v']]))
+                        }}
+                        
+                        # 🧮 Calculate technical indicators # 🧮 Calculate technical indicators
+            indicators             indicators == self self..indicatorsindicators..calculate_allcalculate_all((
+                self                 self..current_symbolcurrent_symbol,,  
+                self                 self..current_intervalcurrent_interval,,  
+                candle_data                 candle_data
+                        ))
+                        
+                        # Merge indicators with candle data # Merge indicators with candle data
+            candle_data             candle_data..updateupdate((indicatorsindicators))
+                        
+                        # 💾 Persist to DuckDB # 💾 Persist to DuckDB
+            self            self..duckdb_managerduckdb_manager..insert_candle_data insert_candle_data((
+                self                 self..current_symbolcurrent_symbol,,
+                self                 self..current_intervalcurrent_interval,,  
+                candle_data                 candle_data
+                        ))
+Phase 2: Advanced Features Implementation
+2.1 Replay Functionality                        
+                        # 📡 Send to frontend # 📡 Send to frontend
+                        awaitawait self self..sendsend((text_datatext_data==jsonjson..dumpsdumps(({{
+                                'type''type'::  'live_candle''live_candle',,
+                                'data''data':: candle_data candle_data
+                        }}))))
+                        
+                        printprint((f"📊 Processed live candle: f"📊 Processed live candle: {{selfself..current_symbolcurrent_symbol}}  {{candle_datacandle_data[['clos'clos
+                        
+                exceptexcept Exception  Exception asas e e::
+            logging             logging..errorerror((f"❌ Error processing Binance message: f"❌ Error processing Binance message: {{ee}}""))
+python
+# apps/trading/replay.py # apps/trading/replay.py
+importimport asyncio asyncio
+fromfrom datetime  datetime importimport datetime datetime,, timedelta timedelta
+fromfrom typing  typing importimport Optional Optional
+importimport polars  polars asas pl pl
+fromfrom  ..models models importimport DuckDBManager DuckDBManager
+classclass  ReplayEngine ReplayEngine::
+        """"""
+    ⏯ TradingView-style Replay Engine     ⏯ TradingView-style Replay Engine
+    Streams historical data with speed control     Streams historical data with speed control
+    """    """
+        
+        defdef  __init____init__((selfself,, duckdb_manager duckdb_manager:: DuckDBManager DuckDBManager))::
+        self        self..duckdb_manager duckdb_manager == duckdb_manager duckdb_manager
+        self        self..is_playing is_playing ==  FalseFalse
+        self        self..current_speed current_speed ==  1.01.0    # 1x, 2x, 5x, 10x # 1x, 2x, 5x, 10x
+        self        self..current_position current_position ==  00
+                
+        asyncasync  defdef  start_replaystart_replay((selfself,, symbol symbol::  strstr,, interval interval::  strstr,,  
+                          start_time                           start_time:: datetime datetime,, end_time end_time:: datetime datetime,,
+                          speed                           speed::  floatfloat  ==  1.01.0,, websocket_consumer  websocket_consumer==NoneNone))::
+                """"""
+        🎬 Start replay with specified parameters         🎬 Start replay with specified parameters
+                
+        Args:        Args:
+            symbol: Trading symbol             symbol: Trading symbol
+            interval: Time interval             interval: Time interval
+            start_time: Replay start time             start_time: Replay start time
+            end_time: Replay end time              end_time: Replay end time  
+            speed: Playback speed multiplier             speed: Playback speed multiplier
+            websocket_consumer: WebSocket to send data to             websocket_consumer: WebSocket to send data to
+        """        """
+                printprint((f"🎬 Starting replay for f"🎬 Starting replay for {{symbolsymbol}}  {{intervalinterval}}""))
+                printprint((f"⏱ Period: f"⏱ Period: {{start_timestart_time}} to  to {{end_timeend_time}}""))
+                printprint((f"🚀 Speed: f"🚀 Speed: {{speedspeed}}x"x"))
+                
+                # Get historical data for replay period # Get historical data for replay period
+        df         df == self self..get_replay_dataget_replay_data((symbolsymbol,, interval interval,, start_time start_time,, end_time end_time))
+                
+                ifif df df..is_emptyis_empty(())::
+                        printprint(("❌ No data available for replay period" "❌ No data available for replay period"))
+                        returnreturn
+                
+        self        self..is_playing is_playing ==  TrueTrue
+        self        self..current_speed current_speed == speed speed
+                
+                # Calculate delay between candles based on speed # Calculate delay between candles based on speed
+        base_delay         base_delay == self self..get_base_delayget_base_delay((intervalinterval))
+        delay         delay == base_delay  base_delay // speed speed
+                
+                printprint((f"📊 Replaying f"📊 Replaying {{lenlen((dfdf))}} candles with  candles with {{delaydelay::.2f.2f}}s delay"s delay"))
+                
+                forfor i i,, row  row inin  enumerateenumerate((dfdf..iter_rowsiter_rows((namednamed==TrueTrue))))::
+                        ifif  notnot self self..is_playingis_playing::
+                                breakbreak
+                                
+            self            self..current_position current_position == i i
+                        
+                        # Send candle data to WebSocket # Send candle data to WebSocket
+                        ifif websocket_consumer  websocket_consumer::
+                                awaitawait websocket_consumer  websocket_consumer..sendsend((text_datatext_data==jsonjson..dumpsdumps(({{
+2.2 Enhanced Technical Indicators                                        'type''type'::  'replay_candle''replay_candle',,
+                                        'data''data'::  dictdict((rowrow)),,
+                                        'replay_info''replay_info'::  {{
+                                                'position''position':: i i,,
+                                                'total''total'::  lenlen((dfdf)),,
+                                                'progress''progress'::  ((i i //  lenlen((dfdf))))  **  100100,,
+                                                'speed''speed':: speed speed
+                                        }}
+                                }}))))
+                        
+                        awaitawait asyncio asyncio..sleepsleep((delaydelay))
+                
+                printprint(("🏁 Replay completed" "🏁 Replay completed"))
+        self        self..is_playing is_playing ==  FalseFalse
+python
+# apps/trading/indicators.py # apps/trading/indicators.py
+importimport pandas  pandas asas pd pd
+importimport numpy  numpy asas np np
+fromfrom typing  typing importimport Dict Dict,, List List,, Optional Optional
+importimport talib talib
+fromfrom dataclasses  dataclasses importimport dataclass dataclass
+@dataclass@dataclass
+classclass  IndicatorConfig IndicatorConfig::
+        """Configuration for technical indicators""" """Configuration for technical indicators"""
+    rsi_period    rsi_period::  intint  ==  1414
+    ema_period    ema_period::  intint  ==  2020
+    macd_fast    macd_fast::  intint  ==  1212
+    macd_slow    macd_slow::  intint  ==  2626
+    macd_signal    macd_signal::  intint  ==  99
+    bb_period    bb_period::  intint  ==  2020
+    bb_std    bb_std::  floatfloat  ==  2.02.0
+classclass  TechnicalIndicators TechnicalIndicators::
+        """"""
+    📊 Comprehensive Technical Indicators Calculator     📊 Comprehensive Technical Indicators Calculator
+    Supports 7+ popular indicators with customizable parameters     Supports 7+ popular indicators with customizable parameters
+    """    """
+        
+        defdef  __init____init__((selfself,, config config:: Optional Optional[[IndicatorConfigIndicatorConfig]]  ==  NoneNone))::
+        self        self..config config == config  config oror IndicatorConfig IndicatorConfig(())
+        self        self..price_historyprice_history:: Dict Dict[[strstr,, List List[[floatfloat]]]]  ==  {{}}
+                
+                printprint(("📊 Technical Indicators engine initialized" "📊 Technical Indicators engine initialized"))
+                
+        defdef  calculate_allcalculate_all((selfself,, symbol symbol::  strstr,, interval interval::  strstr,, candle_data candle_data:: Dict Dict))  -->> Dict Dict::
+                """"""
+        Calculate all enabled technical indicators         Calculate all enabled technical indicators
+                
+        Returns:        Returns:
+            Dictionary containing all indicator values             Dictionary containing all indicator values
+        """        """
+                # Update price history # Update price history
+        key         key ==  f"f"{{symbolsymbol}}__{{intervalinterval}}""
+                ifif key  key notnot  inin self self..price_historyprice_history::
+            self            self..price_historyprice_history[[keykey]]  ==  [[]]
+                        
+        self        self..price_historyprice_history[[keykey]]..appendappend((candle_datacandle_data[['close''close']]))
+                
+                # Keep only last 200 prices for indicator calculation # Keep only last 200 prices for indicator calculation
+                ifif  lenlen((selfself..price_historyprice_history[[keykey]]))  >>  200200::
+            self            self..price_historyprice_history[[keykey]]  == self self..price_historyprice_history[[keykey]][[--200200::]]
+                
+        prices         prices == np np..arrayarray((selfself..price_historyprice_history[[keykey]]))
+                
+        indicators         indicators ==  {{}}
+                
+                # 📈 RSI (Relative Strength Index) # 📈 RSI (Relative Strength Index)
+                ifif  lenlen((pricesprices))  >=>= self self..configconfig..rsi_periodrsi_period::
+            rsi             rsi == talib talib..RSIRSI((pricesprices,, timeperiod timeperiod==selfself..configconfig..rsi_periodrsi_period))
+            indicators             indicators[['rsi_14''rsi_14']]  == rsi rsi[[--11]]  ifif  notnot np np..isnanisnan((rsirsi[[--11]]))  elseelse  NoneNone
+                
+                # 📊 EMA (Exponential Moving Average) # 📊 EMA (Exponential Moving Average) 
+                ifif  lenlen((pricesprices))  >=>= self self..configconfig..ema_periodema_period::
+            ema             ema == talib talib..EMAEMA((pricesprices,, timeperiod timeperiod==selfself..configconfig..ema_periodema_period))
+            indicators             indicators[['ema_20''ema_20']]  == ema ema[[--11]]  ifif  notnot np np..isnanisnan((emaema[[--11]]))  elseelse  NoneNone
+                
+Phase 3: Frontend Enhancements
+3.1 Improved Chart Layout                # 🔄 MACD (Moving Average Convergence Divergence) # 🔄 MACD (Moving Average Convergence Divergence)
+                ifif  lenlen((pricesprices))  >=>= self self..configconfig..macd_slowmacd_slow::
+            macd            macd,, signal signal,, histogram  histogram == talib talib..MACDMACD((pricesprices,,  
+                                              fastperiod                                               fastperiod==selfself..configconfig..macd_fastmacd_fast,,
+                                              slowperiod                                               slowperiod==selfself..configconfig..macd_slowmacd_slow,,
+                                              signalperiod                                               signalperiod==selfself..configconfig..macd_signalmacd_signal))
+            indicators             indicators..updateupdate(({{
+                                'macd_line''macd_line':: macd macd[[--11]]  ifif  notnot np np..isnanisnan((macdmacd[[--11]]))  elseelse  NoneNone,,
+                                'macd_signal''macd_signal':: signal signal[[--11]]  ifif  notnot np np..isnanisnan((signalsignal[[--11]]))  elseelse  NoneNone,,
+                                'macd_histogram''macd_histogram':: histogram histogram[[--11]]  ifif  notnot np np..isnanisnan((histogramhistogram[[--11]]))  elseelse  NonNon
+                        }}))
+                
+                # 📏 Bollinger Bands # 📏 Bollinger Bands
+                ifif  lenlen((pricesprices))  >=>= self self..configconfig..bb_periodbb_period::
+            bb_upper             bb_upper,, bb_middle bb_middle,, bb_lower  bb_lower == talib talib..BBANDSBBANDS((pricesprices,,
+                                                        timeperiod                                                         timeperiod==selfself..configconfig..bb_periobb_perio
+                                                        nbdevup                                                         nbdevup==selfself..configconfig..bb_stdbb_std,,
+                                                        nbdevdn                                                         nbdevdn==selfself..configconfig..bb_stdbb_std))
+            indicators             indicators..updateupdate(({{
+                                'bb_upper''bb_upper':: bb_upper bb_upper[[--11]]  ifif  notnot np np..isnanisnan((bb_upperbb_upper[[--11]]))  elseelse  NoneNone,,
+                                'bb_middle''bb_middle':: bb_middle bb_middle[[--11]]  ifif  notnot np np..isnanisnan((bb_middlebb_middle[[--11]]))  elseelse  NoneNone,,  
+                                'bb_lower''bb_lower':: bb_lower bb_lower[[--11]]  ifif  notnot np np..isnanisnan((bb_lowerbb_lower[[--11]]))  elseelse  NoneNone
+                        }}))
+                
+                returnreturn indicators indicators
+javascript
+// static/js/trading_chart.js // static/js/trading_chart.js
+classclass  TradingChart TradingChart  {{
+        constructorconstructor((containerIdcontainerId))  {{
+                thisthis..containercontainer  ==  documentdocument..getElementByIdgetElementById((containerIdcontainerId));;
+                thisthis..chartscharts  ==  {{}};;
+                thisthis..indicatorsindicators  ==  {{
+                        rsirsi::  truetrue,,
+                        macdmacd::  truetrue,,  
+                        emaema::  truetrue,,
+                        bollingerbollinger::  truetrue
+                }};;
+                
+                thisthis..initializeChartsinitializeCharts(());;
+                thisthis..setupWebSocketsetupWebSocket(());;
+                thisthis..setupControllerssetupControllers(());;
+                
+                consoleconsole..loglog(("📊 Trading Chart initialized" "📊 Trading Chart initialized"));;
+        }}
+        
+        initializeChartsinitializeCharts(())  {{
+                // 📊 Main candlestick chart // 📊 Main candlestick chart
+                thisthis..chartscharts..mainmain  ==  LightweightCharts LightweightCharts..createChartcreateChart((
+                        thisthis..containercontainer..querySelectorquerySelector(('#main-chart''#main-chart')),,  {{
+                                widthwidth::  thisthis..containercontainer..clientWidthclientWidth,,
+                                heightheight::  400400,,
+                                layoutlayout::  {{
+                                        backgroundColorbackgroundColor::  '#1a1a1a''#1a1a1a',,
+                                        textColortextColor::  '#ffffff''#ffffff',,
+                                }},,
+                                gridgrid::  {{
+                                        vertLinesvertLines::  {{  colorcolor::  '#2a2a2a''#2a2a2a'  }},,
+                                        horzLineshorzLines::  {{  colorcolor::  '#2a2a2a''#2a2a2a'  }}
+                                }},,
+                                timeScaletimeScale::  {{
+                                        timeVisibletimeVisible::  truetrue,,
+                                        secondsVisiblesecondsVisible::  falsefalse,,
+                                }}
+                        }}
+                ));;
+                
+                // 📈 RSI Chart (separate pane) // 📈 RSI Chart (separate pane)
+                thisthis..chartscharts..rsirsi  ==  LightweightCharts LightweightCharts..createChartcreateChart((
+                        thisthis..containercontainer..querySelectorquerySelector(('#rsi-chart''#rsi-chart')),,  {{
+                                widthwidth::  thisthis..containercontainer..clientWidthclientWidth,,
+                                heightheight::  150150,,
+                                layoutlayout::  {{
+                                        backgroundColorbackgroundColor::  '#1a1a1a''#1a1a1a',,
+                                        textColortextColor::  '#ffffff''#ffffff',,
+                                }}
+                        }}
+                ));;
+                
+                // 🔄 MACD Chart (separate pane) // 🔄 MACD Chart (separate pane)
+                thisthis..chartscharts..macdmacd  ==  LightweightCharts LightweightCharts..createChartcreateChart((
+                        thisthis..containercontainer..querySelectorquerySelector(('#macd-chart''#macd-chart')),,  {{
+                                widthwidth::  thisthis..containercontainer..clientWidthclientWidth,,  
+                                heightheight::  150150,,
+                                layoutlayout::  {{
+                                        backgroundColorbackgroundColor::  '#1a1a1a''#1a1a1a',,
+                                        textColortextColor::  '#ffffff''#ffffff',,
+                                }}
+                        }}
+                ));;
+                
+                thisthis..setupSeriessetupSeries(());;
+        }}
+        
+        setupSeriessetupSeries(())  {{
+                // 🕯 Candlestick series // 🕯 Candlestick series
+                thisthis..seriesseries  ==  {{
+                        candlescandles::  thisthis..chartscharts..mainmain..addCandlestickSeries addCandlestickSeries(({{
+                                upColorupColor::  '#4bffb5''#4bffb5',,
+                                downColordownColor::  '#ff6b6b''#ff6b6b',,  
+                                borderDownColorborderDownColor::  '#ff6b6b''#ff6b6b',,
+                                borderUpColorborderUpColor::  '#4bffb5''#4bffb5',,
+                                wickDownColorwickDownColor::  '#ff6b6b''#ff6b6b',,
+                                wickUpColorwickUpColor::  '#4bffb5''#4bffb5',,
+                        }})),,
+                        
+                        // 📊 EMA line// 📊 EMA line
+                        emaema::  thisthis..chartscharts..mainmain..addLineSeriesaddLineSeries(({{
+                                colorcolor::  '#ffaa00''#ffaa00',,
+                                lineWidthlineWidth::  22,,
+                                titletitle::  'EMA 20''EMA 20'
+                        }})),,
+                        
+                        // 📏 Bollinger Bands  // 📏 Bollinger Bands  
+                        bb_upperbb_upper::  thisthis..chartscharts..mainmain..addLineSeriesaddLineSeries(({{
+                                colorcolor::  '#888888''#888888',,
+                                lineWidthlineWidth::  11,,
+                                titletitle::  'BB Upper''BB Upper'
+                        }})),,
+                        bb_lowerbb_lower::  thisthis..chartscharts..mainmain..addLineSeriesaddLineSeries(({{
+                                colorcolor::  '#888888''#888888',,  
+                                lineWidthlineWidth::  11,,
+                                titletitle::  'BB Lower''BB Lower'
+                        }})),,
+                        
+                        // 📈 RSI// 📈 RSI
+                        rsirsi::  thisthis..chartscharts..rsirsi..addLineSeriesaddLineSeries(({{
+                                colorcolor::  '#ff9500''#ff9500',,
+                                lineWidthlineWidth::  22,,
+                                titletitle::  'RSI 14''RSI 14'
+                        }})),,
+                        
+                        // 🔄 MACD// 🔄 MACD
+                        macdmacd::  thisthis..chartscharts..macdmacd..addLineSeriesaddLineSeries(({{
+                                colorcolor::  '#00bcd4''#00bcd4',,
+                                lineWidthlineWidth::  22,,  
+                                titletitle::  'MACD''MACD'
+                        }})),,
+                        macd_signalmacd_signal::  thisthis..chartscharts..macdmacd..addLineSeriesaddLineSeries(({{
+                                colorcolor::  '#ff5722''#ff5722',,
+                                lineWidthlineWidth::  22,,
+                                titletitle::  'Signal''Signal'
+                        }}))
+                }};;
+                
+                // Add RSI reference lines // Add RSI reference lines
+                thisthis..chartscharts..rsirsi..addLineSeriesaddLineSeries(({{
+                        colorcolor::  '#ff0000''#ff0000',,
+                        lineWidthlineWidth::  11,,
+                        priceLineVisiblepriceLineVisible::  falsefalse
+                }}))..setDatasetData(([[{{timetime::  00,,  valuevalue::  7070}},,  {{timetime::  999999999 999999999,,  valuevalue::  7070}}]]));;
+                
+                thisthis..chartscharts..rsirsi..addLineSeriesaddLineSeries(({{
+                        colorcolor::  '#00ff00''#00ff00',,  
+                        lineWidthlineWidth::  11,,
+                        priceLineVisiblepriceLineVisible::  falsefalse
+                }}))..setDatasetData(([[{{timetime::  00,,  valuevalue::  3030}},,  {{timetime::  999999999 999999999,,  valuevalue::  3030}}]]));;
+        }}
+        
+        updateCandleupdateCandle((datadata))  {{
+                constconst time  time ==  MathMath..floorfloor((newnew  DateDate((datadata..timestamptimestamp))..getTimegetTime(())  //  10001000));;
+                
+                // 🕯 Update main candlestick // 🕯 Update main candlestick
+                thisthis..seriesseries..candlescandles..updateupdate(({{
+                        timetime:: time time,,
+                        openopen:: data data..openopen,,
+                        highhigh:: data data..highhigh,,  
+                        lowlow:: data data..lowlow,,
+                        closeclose:: data data..closeclose
+                }}));;
+                
+                // 📊 Update indicators if enabled // 📊 Update indicators if enabled
+                ifif  ((thisthis..indicatorsindicators..emaema  &&&& data data..indicatorsindicators..ema_20ema_20))  {{
+                        thisthis..seriesseries..emaema..updateupdate(({{
+                                timetime:: time time,,
+                                valuevalue:: data data..indicatorsindicators..ema_20ema_20
+                        }}));;
+                }}
+                
+                ifif  ((thisthis..indicatorsindicators..rsirsi  &&&& data data..indicatorsindicators..rsi_14rsi_14))  {{
+                        thisthis..seriesseries..rsirsi..updateupdate(({{
+                                timetime:: time time,,
+                                valuevalue:: data data..indicatorsindicators..rsi_14rsi_14
+                        }}));;
+                }}
+                
+                ifif  ((thisthis..indicatorsindicators..macdmacd  &&&& data data..indicatorsindicators..macdmacd))  {{
+                        thisthis..seriesseries..macdmacd..updateupdate(({{
+                                timetime:: time time,,
+                                valuevalue:: data data..indicatorsindicators..macdmacd..macdmacd
+                        }}));;
+                        
+                        thisthis..seriesseries..macd_signalmacd_signal..updateupdate(({{
+                                timetime:: time time,,
+                                valuevalue:: data data..indicatorsindicators..macdmacd..signalsignal
+                        }}));;
+                }}
+                
+                ifif  ((thisthis..indicatorsindicators..bollingerbollinger  &&&& data data..indicatorsindicators..bollingerbollinger))  {{
+                        thisthis..seriesseries..bb_upperbb_upper..updateupdate(({{
+                                timetime:: time time,,
+                                valuevalue:: data data..indicatorsindicators..bollingerbollinger..upperupper
+                        }}));;
+                        
+                        thisthis..seriesseries..bb_lowerbb_lower..updateupdate(({{
+                                timetime:: time time,,
+                                valuevalue:: data data..indicatorsindicators..bollingerbollinger..lowerlower    
+                        }}));;
+                }}
+        }}
+}}
+// Initialize when DOM is ready // Initialize when DOM is ready
+Phase 4: Implementation Checklist
+✅ Completed Features
+ Real-time WebSocket data streaming
+ Multi-pane chart layout
+ Basic technical indicators (RSI, MACD, EMA)
+ Time synchronization across panes
+🔄 In Progress
+ DuckDB data persistence
+ Historical data loading
+ Clean UI/UX implementation
+ Symbol/interval switching
+📋 Next Steps (Priority Order)
+1. Immediate (Week 1)
+ Implement DuckDB persistence layer
+ Add historical data loading on chart startup
+ Clean up UI layout and styling
+ Add proper error handling and logging
+2. Short Term (Week 2-3)
+ Implement replay functionality
+ Add indicator toggle controlsdocumentdocument..addEventListeneraddEventListener(('DOMContentLoaded' 'DOMContentLoaded',,  functionfunction(())  {{
+        windowwindow..tradingCharttradingChart  ==  newnew  TradingChart TradingChart(('trading-container' 'trading-container'));;
+}}));;
