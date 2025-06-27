@@ -3188,7 +3188,7 @@ class EnhancedWebSocketManager:
 ### 3.1 Enhanced Frontend Controls
 **File**: `templates/trading/chart.html` (additions)
 
-```html
+```html 
 <!-- Enhanced Symbol & Interval Selector -->
 <div class="control-panel" style="position: fixed; top: 20px; left: 20px; z-index: 1000; 
      background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
@@ -3377,18 +3377,18 @@ function getCookie(name) {
 **File**: `templates/trading/indicator_controls.html`
 
 ```html
-<!-- Indicator Control Panel -->
+<!-- Indicator Control Panel --
 <div class="indicator-panel" style="position: fixed; top: 20px; right: 20px; z-index: 1000;
      background: rgba(42, 42, 42, 0.95); color: white; padding: 20px; border-radius: 8px; 
      box-shadow: 0 4px 12px rgba(0,0,0,0.3); min-width: 250px;">
      
     <h5 style="margin-bottom: 15px; color: #00d4aa;">🧩 Indicators</h5>
     
-    <!-- Main Chart Indicators -->
+    <!-- Main Chart Indicators --
     <div class="indicator-group">
         <h6 style="color: #ccc; margin-bottom: 10px;">📈 Main Chart</h6>
         
-        <!-- EMA Controls -->
+        <!-- EMA Controls --
         <div class="indicator-item" style="margin-bottom: 10px;">
             <label class="switch" style="display: flex; align-items: center;">
                 <input type="checkbox" id="emaToggle" checked>
@@ -3401,7 +3401,7 @@ function getCookie(name) {
             </div>
         </div>
         
-        <!-- Bollinger Bands -->
+        <!-- Bollinger Bands --
         <div class="indicator-item" style="margin-bottom: 10px;">
             <label class="switch" style="display: flex; align-items: center;">
                 <input type="checkbox" id="bbToggle" checked>
@@ -3417,11 +3417,11 @@ function getCookie(name) {
         </div>
     </div>
     
-    <!-- Oscillator Indicators -->
+    <!-- Oscillator Indicators --
     <div class="indicator-group" style="margin-top: 15px;">
         <h6 style="color: #ccc; margin-bottom: 10px;">📊 Oscillators</h6>
         
-        <!-- RSI -->
+        <!-- RSI --
         <div class="indicator-item" style="margin-bottom: 10px;">
             <label class="switch" style="display: flex; align-items: center;">
                 <input type="checkbox" id="rsiToggle" checked>
@@ -3434,7 +3434,7 @@ function getCookie(name) {
             </div>
         </div>
         
-        <!-- MACD -->
+        <!-- MACD --
         <div class="indicator-item" style="margin-bottom: 10px;">
             <label class="switch" style="display: flex; align-items: center;">
                 <input type="checkbox" id="macdToggle" checked>
@@ -3448,7 +3448,7 @@ function getCookie(name) {
             </div>
         </div>
         
-        <!-- Stochastic -->
+        <!-- Stochastic --
         <div class="indicator-item" style="margin-bottom: 10px;">
             <label class="switch" style="display: flex; align-items: center;">
                 <input type="checkbox" id="stochToggle">
