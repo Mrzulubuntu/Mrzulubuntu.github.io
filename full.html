@@ -3193,7 +3193,7 @@ class EnhancedWebSocketManager:
 <div class="control-panel" style="position: fixed; top: 20px; left: 20px; z-index: 1000; 
      background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
      
-    <!-- Symbol Selector -->
+    <!-- Symbol Selector --
     <div class="selector-group">
         <label for="symbolSelector">📊 Symbol:</label>
         <select id="symbolSelector" class="form-control" style="width: 120px; display: inline-block;">
@@ -3205,11 +3205,11 @@ class EnhancedWebSocketManager:
         </select>
     </div>
     
-    <!-- Interval Selector -->
+    <!-- Interval Selector --
     <div class="selector-group" style="margin-left: 10px;">
         <label for="intervalSelector">⏱️ Interval:</label>
         <select id="intervalSelector" class="form-control" style="width: 80px; display: inline-block;">
-            <!-- Ticks -->
+            <!-- Ticks --
             <optgroup label="Ticks">
                 <option value="1tick">1 Tick</option>
                 <option value="10tick">10 Ticks</option>
@@ -3217,7 +3217,7 @@ class EnhancedWebSocketManager:
                 <option value="1000tick">1000 Ticks</option>
             </optgroup>
             
-            <!-- Seconds -->
+            <!-- Seconds --
             <optgroup label="Seconds">
                 <option value="1s">1s</option>
                 <option value="3s">3s</option>
@@ -3226,7 +3226,7 @@ class EnhancedWebSocketManager:
                 <option value="30s">30s</option>
             </optgroup>
             
-            <!-- Minutes -->
+            <!-- Minutes --
             <optgroup label="Minutes">
                 <option value="1m" selected>1m</option>
                 <option value="3m">3m</option>
@@ -3236,7 +3236,7 @@ class EnhancedWebSocketManager:
                 <option value="45m">45m</option>
             </optgroup>
             
-            <!-- Hours -->
+            <!-- Hours --
             <optgroup label="Hours">
                 <option value="1h">1h</option>
                 <option value="2h">2h</option>
@@ -3246,7 +3246,7 @@ class EnhancedWebSocketManager:
                 <option value="12h">12h</option>
             </optgroup>
             
-            <!-- Days & Beyond -->
+            <!-- Days & Beyond --
             <optgroup label="Days+">
                 <option value="1d">1D</option>
                 <option value="1w">1W</option>
@@ -3256,7 +3256,7 @@ class EnhancedWebSocketManager:
                 <option value="1y">1Y</option>
             </optgroup>
             
-            <!-- Ranges -->
+            <!-- Ranges --
             <optgroup label="Ranges">
                 <option value="1R">1R</option>
                 <option value="10R">10R</option>
@@ -3266,12 +3266,12 @@ class EnhancedWebSocketManager:
         </select>
     </div>
     
-    <!-- Apply Button -->
+    <!-- Apply Button --
     <button id="applySelection" class="btn btn-primary" style="margin-left: 10px;">
         🚀 Apply
     </button>
     
-    <!-- Loading Indicator -->
+    <!-- Loading Indicator --
     <div id="loadingIndicator" style="display: none; margin-left: 10px;">
         <div class="spinner-border spinner-border-sm" role="status">
             <span class="sr-only">Loading...</span>
@@ -3280,7 +3280,7 @@ class EnhancedWebSocketManager:
     </div>
 </div>
 
-<!-- Enhanced JavaScript -->
+<!-- Enhanced JavaScript --
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const symbolSelector = document.getElementById('symbolSelector');
