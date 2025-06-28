@@ -1,1 +1,887 @@
-<script src="https://gist.github.com/Mrzulubuntu/32e22e07947b037ebadee89b8f34cece.js"></script>
+<plaintext>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced TradingView Platform</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lightweight-charts/4.1.3/lightweight-charts.standalone.production.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #ffffff;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 280px;
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.6);
+            border-radius: 3px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo h1 {
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .symbol-info {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .symbol-name {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #6366f1;
+        }
+
+        .price-info {
+            margin-bottom: 15px;
+        }
+
+        .current-price {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .price-change {
+            font-size: 14px;
+            padding: 4px 8px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .price-change.positive {
+            color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .price-change.negative {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .controls-section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #a5b4fc;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #cbd5e1;
+            font-weight: 500;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        /* Indicator Controls */
+        .indicator-controls {
+            margin-bottom: 25px;
+        }
+
+        .indicator-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .indicator-toggle:hover {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .indicator-label {
+            font-weight: 500;
+            color: #e2e8f0;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: rgba(75, 85, 99, 0.8);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: #6366f1;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: #ffffff;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(26px);
+        }
+
+        /* Replay Controls */
+        .replay-controls {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .replay-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .replay-btn {
+            flex: 1;
+            min-width: 60px;
+            padding: 10px;
+            background: rgba(99, 102, 241, 0.8);
+            border: none;
+            border-radius: 6px;
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .replay-btn:hover {
+            background: #6366f1;
+            transform: translateY(-1px);
+        }
+
+        .replay-btn:active {
+            transform: translateY(0);
+        }
+
+        .replay-btn.playing {
+            background: #10b981;
+        }
+
+        .speed-controls {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .speed-btn {
+            flex: 1;
+            padding: 8px;
+            background: rgba(75, 85, 99, 0.6);
+            border: none;
+            border-radius: 4px;
+            color: #cbd5e1;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .speed-btn.active {
+            background: #6366f1;
+            color: #ffffff;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .chart-container {
+            flex: 1;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .chart-btn {
+            padding: 8px 16px;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 6px;
+            color: #a5b4fc;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .chart-btn:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: #6366f1;
+        }
+
+        .chart-btn.active {
+            background: #6366f1;
+            color: #ffffff;
+        }
+
+        .chart-grid {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            gap: 15px;
+            min-height: 0;
+        }
+
+        .chart-pane {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .main-chart {
+            flex: 3;
+            min-height: 400px;
+        }
+
+        .indicator-chart {
+            flex: 1;
+            min-height: 150px;
+        }
+
+        .chart-pane-header {
+            padding: 10px 15px;
+            background: rgba(15, 23, 42, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 14px;
+            font-weight: 500;
+            color: #a5b4fc;
+        }
+
+        /* Status and Loading */
+        .status-bar {
+            padding: 15px 20px;
+            background: rgba(15, 23, 42, 0.9);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: #10b981;
+        }
+
+        .status-dot.disconnected {
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 1000;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(99, 102, 241, 0.3);
+            border-top: 3px solid #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #a5b4fc;
+            font-size: 14px;
+        }
+
+        /* Progress Bar Styles */
+        .progress-container {
+            margin: 15px 0;
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(75, 85, 99, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            font-weight: 600;
+            color: #ffffff;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 250px;
+                transform: translateX(-100%);
+                position: fixed;
+                z-index: 1000;
+                height: 100vh;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .chart-grid {
+                flex-direction: column;
+            }
+
+            .replay-buttons {
+                flex-direction: column;
+            }
+        }
+
+        /* Utility Classes */
+        .hidden {
+            display: none !important;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <h1>TradingView Pro</h1>
+            </div>
+
+            <!-- Symbol Information -->
+            <div class="symbol-info">
+                <div class="symbol-name" id="symbolDisplay">BTCUSDT</div>
+                <div class="price-info">
+                    <div class="current-price" id="currentPrice">$0.00</div>
+                    <div class="price-change positive" id="priceChange">+0.00 (0.00%)</div>
+                </div>
+            </div>
+
+            <!-- Controls Section -->
+            <div class="controls-section">
+                <div class="section-title">Market Data</div>
+                
+                <div class="control-group">
+                    <label class="control-label">Symbol</label>
+                    <select id="symbolSelect">
+                        <option value="BTCUSDT">BTCUSDT</option>
+                        <option value="ETHUSDT">ETHUSDT</option>
+                        <option value="BNBUSDT">BNBUSDT</option>
+                        <option value="ADAUSDT">ADAUSDT</option>
+                        <option value="XRPUSDT">XRPUSDT</option>
+                        <option value="SOLUSDT">SOLUSDT</option>
+                        <option value="DOGEUSDT">DOGEUSDT</option>
+                        <option value="AVAXUSDT">AVAXUSDT</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Timeframe</label>
+                    <select id="intervalSelect">
+                        <option value="1s">1 Second</option>
+                        <option value="1m">1 Minute</option>
+                        <option value="3m">3 Minutes</option>
+                        <option value="5m">5 Minutes</option>
+                        <option value="15m">15 Minutes</option>
+                        <option value="30m">30 Minutes</option>
+                        <option value="1h">1 Hour</option>
+                        <option value="2h">2 Hours</option>
+                        <option value="4h">4 Hours</option>
+                        <option value="6h">6 Hours</option>
+                        <option value="8h">8 Hours</option>
+                        <option value="12h">12 Hours</option>
+                        <option value="1d">1 Day</option>
+                        <option value="3d">3 Days</option>
+                        <option value="1w">1 Week</option>
+                        <option value="1M">1 Month</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Indicator Controls -->
+            <div class="indicator-controls">
+                <div class="section-title">Technical Indicators</div>
+                
+                <div class="indicator-toggle" data-indicator="rsi">
+                    <span class="indicator-label">RSI (14)</span>
+                    <div class="toggle-switch active">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="indicator-toggle" data-indicator="macd">
+                    <span class="indicator-label">MACD (12,26,9)</span>
+                    <div class="toggle-switch active">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="indicator-toggle" data-indicator="ema">
+                    <span class="indicator-label">EMA (20)</span>
+                    <div class="toggle-switch active">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="indicator-toggle" data-indicator="bb">
+                    <span class="indicator-label">Bollinger Bands</span>
+                    <div class="toggle-switch active">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="indicator-toggle" data-indicator="stoch">
+                    <span class="indicator-label">Stochastic</span>
+                    <div class="toggle-switch">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="indicator-toggle" data-indicator="volume">
+                    <span class="indicator-label">Volume</span>
+                    <div class="toggle-switch active">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+
+                <div class="indicator-toggle" data-indicator="sma">
+                    <span class="indicator-label">SMA (50)</span>
+                    <div class="toggle-switch">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Replay Controls -->
+            <div class="replay-controls">
+                <div class="section-title">Replay Mode</div>
+                
+                <div class="control-group">
+                    <label class="control-label">Start Date</label>
+                    <input type="datetime-local" id="replayStartDate">
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">End Date</label>
+                    <input type="datetime-local" id="replayEndDate">
+                </div>
+
+                <div class="replay-buttons">
+                    <button class="replay-btn" id="replayPlay">▶ Play</button>
+                    <button class="replay-btn" id="replayPause">⏸ Pause</button>
+                    <button class="replay-btn" id="replayStop">⏹ Stop</button>
+                    <button class="replay-btn" id="replayRewind">⏪ Rewind</button>
+                </div>
+
+                <div class="speed-controls">
+                    <button class="speed-btn active" data-speed="1">1x</button>
+                    <button class="speed-btn" data-speed="2">2x</button>
+                    <button class="speed-btn" data-speed="5">5x</button>
+                    <button class="speed-btn" data-speed="10">10x</button>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="replayProgress" style="width: 0%">
+                            <div class="progress-text" id="progressText">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <div class="chart-title">Advanced Trading Charts</div>
+                    <div class="chart-controls">
+                        <button class="chart-btn active" data-chart="candlestick">Candlesticks</button>
+                        <button class="chart-btn" data-chart="line">Line</button>
+                        <button class="chart-btn" data-chart="area">Area</button>
+                        <button class="chart-btn" data-chart="heikin">Heikin-Ashi</button>
+                    </div>
+                </div>
+
+                <div class="chart-grid">
+                    <!-- Main Chart Pane -->
+                    <div class="chart-pane main-chart">
+                        <div class="chart-pane-header">Price Chart with Indicators</div>
+                        <div id="mainChart" style="width: 100%; flex: 1;"></div>
+                        <div class="loading-overlay" id="mainChartLoading">
+                            <div class="loading-spinner"></div>
+                            <div class="loading-text">Loading historical data...</div>
+                        </div>
+                    </div>
+
+                    <!-- RSI Chart Pane -->
+                    <div class="chart-pane indicator-chart" id="rsiPane">
+                        <div class="chart-pane-header">RSI (Relative Strength Index)</div>
+                        <div id="rsiChart" style="width: 100%; flex: 1;"></div>
+                    </div>
+
+                    <!-- MACD Chart Pane -->
+                    <div class="chart-pane indicator-chart" id="macdPane">
+                        <div class="chart-pane-header">MACD (Moving Average Convergence Divergence)</div>
+                        <div id="macdChart" style="width: 100%; flex: 1;"></div>
+                    </div>
+
+                    <!-- Volume Chart Pane -->
+                    <div class="chart-pane indicator-chart" id="volumePane">
+                        <div class="chart-pane-header">Volume</div>
+                        <div id="volumeChart" style="width: 100%; flex: 1;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div class="connection-status">
+                    <div class="status-dot connected" id="connectionStatus"></div>
+                    <span id="connectionText">Connected to Binance WebSocket</span>
+                </div>
+                <div class="data-info">
+                    <span id="dataInfo">Real-time data | Last update: <span id="lastUpdate">--:--:--</span></span>
+                </div>
+                <div class="performance-info">
+                    <span id="performanceInfo">Latency: <span id="latency">-- ms</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('🚀 Advanced Trading Platform Initializing...');
+        
+        // ============================================
+        // GLOBAL VARIABLES AND CONFIGURATION
+        // ============================================
+        
+        let mainChart, rsiChart, macdChart, volumeChart;
+        let candlestickSeries, volumeSeries, emaSeries, bbSeries;
+        let rsiLineSeries, macdLineSeries, macdSignalSeries, macdHistogramSeries;
+        let volumeBarSeries;
+        
+        let websocket = null;
+        let currentSymbol = 'BTCUSDT';
+        let currentInterval = '1m';
+        let isReplayMode = false;
+        let replaySpeed = 1;
+        let replayTimer = null;
+        let replayData = [];
+        let replayIndex = 0;
+        
+        // Data storage
+        let ohlcData = [];
+        let volumeData = [];
+        let indicatorData = {
+            rsi: [],
+            macd: [],
+            macdSignal: [],
+            macdHistogram: [],
+            ema: [],
+            bbUpper: [],
+            bbLower: [],
+            bbMiddle: []
+        };
+        
+        // Performance tracking
+        let lastUpdateTime = Date.now();
+        let latencySum = 0;
+        let latencyCount = 0;
+        
+        // UI state
+        let activeIndicators = {
+            rsi: true,
+            macd: true,
+            ema: true,
+            bb: true,
+            stoch: false,
+            volume: true,
+            sma: false
+        };
+        
+        console.log('📊 Configuration loaded successfully');
+        
+        // ============================================
+        // CHART INITIALIZATION
+        // ============================================
+        
+        function initializeCharts() {
+            console.log('🎯 Initializing chart components...');
+            
+            try {
+                // Main Chart Configuration
+                const mainChartOptions = {
+                    width: 0,
+                    height: 0,
+                    layout: {
+                        background: { type: 'solid', color: 'rgba(0, 0, 0, 0)' },
+                        textColor: '#d1d5db',
+                        fontSize: 12,
+                        fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif'
+                    },
+                    grid: {
+                        vertLines: { color: 'rgba(99, 102, 241, 0.1)' },
+                        horzLines: { color: 'rgba(99, 102, 241, 0.1)' }
+                    },
+                    crosshair: {
+                        mode: LightweightCharts.CrosshairMode.Normal,
+                        vertLine: {
+                            color: 'rgba(99, 102, 241, 0.6)',
+                            width: 1,
+                            style: LightweightCharts.LineStyle.Dashed
+                        },
+                        horzLine: {
+                            color: 'rgba(99, 102, 241, 0.6)',
+                            width: 1,
+                            style: LightweightCharts.LineStyle.Dashed
+                        }
+                    },
+                    rightPriceScale: {
+                        borderColor: 'rgba(99, 102, 241, 0.3)',
+                        textColor: '#d1d5db',
+                        scaleMargins: { top: 0.1, bottom: 0.1 }
+                    },
+                    timeScale: {
+                        borderColor: 'rgba(99, 102, 241, 0.3)',
+                        textColor: '#d1d5db',
+                        timeVisible: true,
+                        secondsVisible: false
+                    },
+                    handleScroll: {
+                        mouseWheel: true,
+                        pressedMouseMove: true,
+                        horzTouchDrag: true,
+                        vertTouchDrag: true
+                    },
+                    handleScale: {
+                        axisPressedMouseMove: true,
+                        mouseWheel: true,
+                        pinch: true
+                    }
+                };
+                
+                // Initialize main chart
+                const mainChartElement = document.getElementById('mainChart');
+                mainChart = LightweightCharts.createChart(mainChartElement, mainChartOptions);
+                
+                // Add candlestick series
+                candlestickSeries = mainChart.addCandlestickSeries({
+                    upColor: '#10b981',
+                    downColor: '#ef4444',
+                    borderDownColor: '#ef4444',
+                    borderUpColor: '#10b981',
+                    wickDownColor: '#ef4444',
+                    wickUpColor: '#10b981'
+                });
+                
+                // Add EMA series
+                emaSeries = mainChart.addLineSeries({
+                    color: '#6366f1',
+                    lineWidth: 2,
+                    title: 'EMA(20)'
+                });
+                
+                // Add Bollinger Bands
+                bbSeries = {
+                    upper: mainChart.addLineSeries({
+                        color: 'rgba(139, 92, 246, 0.6)',
+                        lineWidth: 1,
+                        title: 'BB Upper'
+                    }),
+                    middle: mainChart.addLineSeries({
+                        color: 'rgba(139, 92,
+                        
+                        
+</plaintext>
