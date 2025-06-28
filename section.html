@@ -1,12 +1,11 @@
-<plaintext>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced TradingView Platform</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lightweight-charts/4.1.3/lightweight-charts.standalone.production.js"></script>
-    <style>
+&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+    &lt;meta charset=&quot;UTF-8&quot;&gt;
+    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+    &lt;title&gt;Advanced TradingView Platform&lt;/title&gt;
+    &lt;script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/lightweight-charts/4.1.3/lightweight-charts.standalone.production.js&quot;&gt;&lt;/script&gt;
+    &lt;style&gt;
         * {
             margin: 0;
             padding: 0;
@@ -527,220 +526,220 @@
             from { transform: translateY(-20px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <div class="logo">
-                <h1>TradingView Pro</h1>
-            </div>
+    &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;div class=&quot;container&quot;&gt;
+        &lt;!-- Sidebar --&gt;
+        &lt;div class=&quot;sidebar&quot;&gt;
+            &lt;div class=&quot;logo&quot;&gt;
+                &lt;h1&gt;TradingView Pro&lt;/h1&gt;
+            &lt;/div&gt;
 
-            <!-- Symbol Information -->
-            <div class="symbol-info">
-                <div class="symbol-name" id="symbolDisplay">BTCUSDT</div>
-                <div class="price-info">
-                    <div class="current-price" id="currentPrice">$0.00</div>
-                    <div class="price-change positive" id="priceChange">+0.00 (0.00%)</div>
-                </div>
-            </div>
+            &lt;!-- Symbol Information --&gt;
+            &lt;div class=&quot;symbol-info&quot;&gt;
+                &lt;div class=&quot;symbol-name&quot; id=&quot;symbolDisplay&quot;&gt;BTCUSDT&lt;/div&gt;
+                &lt;div class=&quot;price-info&quot;&gt;
+                    &lt;div class=&quot;current-price&quot; id=&quot;currentPrice&quot;&gt;$0.00&lt;/div&gt;
+                    &lt;div class=&quot;price-change positive&quot; id=&quot;priceChange&quot;&gt;+0.00 (0.00%)&lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
 
-            <!-- Controls Section -->
-            <div class="controls-section">
-                <div class="section-title">Market Data</div>
+            &lt;!-- Controls Section --&gt;
+            &lt;div class=&quot;controls-section&quot;&gt;
+                &lt;div class=&quot;section-title&quot;&gt;Market Data&lt;/div&gt;
                 
-                <div class="control-group">
-                    <label class="control-label">Symbol</label>
-                    <select id="symbolSelect">
-                        <option value="BTCUSDT">BTCUSDT</option>
-                        <option value="ETHUSDT">ETHUSDT</option>
-                        <option value="BNBUSDT">BNBUSDT</option>
-                        <option value="ADAUSDT">ADAUSDT</option>
-                        <option value="XRPUSDT">XRPUSDT</option>
-                        <option value="SOLUSDT">SOLUSDT</option>
-                        <option value="DOGEUSDT">DOGEUSDT</option>
-                        <option value="AVAXUSDT">AVAXUSDT</option>
-                    </select>
-                </div>
+                &lt;div class=&quot;control-group&quot;&gt;
+                    &lt;label class=&quot;control-label&quot;&gt;Symbol&lt;/label&gt;
+                    &lt;select id=&quot;symbolSelect&quot;&gt;
+                        &lt;option value=&quot;BTCUSDT&quot;&gt;BTCUSDT&lt;/option&gt;
+                        &lt;option value=&quot;ETHUSDT&quot;&gt;ETHUSDT&lt;/option&gt;
+                        &lt;option value=&quot;BNBUSDT&quot;&gt;BNBUSDT&lt;/option&gt;
+                        &lt;option value=&quot;ADAUSDT&quot;&gt;ADAUSDT&lt;/option&gt;
+                        &lt;option value=&quot;XRPUSDT&quot;&gt;XRPUSDT&lt;/option&gt;
+                        &lt;option value=&quot;SOLUSDT&quot;&gt;SOLUSDT&lt;/option&gt;
+                        &lt;option value=&quot;DOGEUSDT&quot;&gt;DOGEUSDT&lt;/option&gt;
+                        &lt;option value=&quot;AVAXUSDT&quot;&gt;AVAXUSDT&lt;/option&gt;
+                    &lt;/select&gt;
+                &lt;/div&gt;
 
-                <div class="control-group">
-                    <label class="control-label">Timeframe</label>
-                    <select id="intervalSelect">
-                        <option value="1s">1 Second</option>
-                        <option value="1m">1 Minute</option>
-                        <option value="3m">3 Minutes</option>
-                        <option value="5m">5 Minutes</option>
-                        <option value="15m">15 Minutes</option>
-                        <option value="30m">30 Minutes</option>
-                        <option value="1h">1 Hour</option>
-                        <option value="2h">2 Hours</option>
-                        <option value="4h">4 Hours</option>
-                        <option value="6h">6 Hours</option>
-                        <option value="8h">8 Hours</option>
-                        <option value="12h">12 Hours</option>
-                        <option value="1d">1 Day</option>
-                        <option value="3d">3 Days</option>
-                        <option value="1w">1 Week</option>
-                        <option value="1M">1 Month</option>
-                    </select>
-                </div>
-            </div>
+                &lt;div class=&quot;control-group&quot;&gt;
+                    &lt;label class=&quot;control-label&quot;&gt;Timeframe&lt;/label&gt;
+                    &lt;select id=&quot;intervalSelect&quot;&gt;
+                        &lt;option value=&quot;1s&quot;&gt;1 Second&lt;/option&gt;
+                        &lt;option value=&quot;1m&quot;&gt;1 Minute&lt;/option&gt;
+                        &lt;option value=&quot;3m&quot;&gt;3 Minutes&lt;/option&gt;
+                        &lt;option value=&quot;5m&quot;&gt;5 Minutes&lt;/option&gt;
+                        &lt;option value=&quot;15m&quot;&gt;15 Minutes&lt;/option&gt;
+                        &lt;option value=&quot;30m&quot;&gt;30 Minutes&lt;/option&gt;
+                        &lt;option value=&quot;1h&quot;&gt;1 Hour&lt;/option&gt;
+                        &lt;option value=&quot;2h&quot;&gt;2 Hours&lt;/option&gt;
+                        &lt;option value=&quot;4h&quot;&gt;4 Hours&lt;/option&gt;
+                        &lt;option value=&quot;6h&quot;&gt;6 Hours&lt;/option&gt;
+                        &lt;option value=&quot;8h&quot;&gt;8 Hours&lt;/option&gt;
+                        &lt;option value=&quot;12h&quot;&gt;12 Hours&lt;/option&gt;
+                        &lt;option value=&quot;1d&quot;&gt;1 Day&lt;/option&gt;
+                        &lt;option value=&quot;3d&quot;&gt;3 Days&lt;/option&gt;
+                        &lt;option value=&quot;1w&quot;&gt;1 Week&lt;/option&gt;
+                        &lt;option value=&quot;1M&quot;&gt;1 Month&lt;/option&gt;
+                    &lt;/select&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
 
-            <!-- Indicator Controls -->
-            <div class="indicator-controls">
-                <div class="section-title">Technical Indicators</div>
+            &lt;!-- Indicator Controls --&gt;
+            &lt;div class=&quot;indicator-controls&quot;&gt;
+                &lt;div class=&quot;section-title&quot;&gt;Technical Indicators&lt;/div&gt;
                 
-                <div class="indicator-toggle" data-indicator="rsi">
-                    <span class="indicator-label">RSI (14)</span>
-                    <div class="toggle-switch active">
-                        <div class="toggle-slider"></div>
-                    </div>
-                </div>
+                &lt;div class=&quot;indicator-toggle&quot; data-indicator=&quot;rsi&quot;&gt;
+                    &lt;span class=&quot;indicator-label&quot;&gt;RSI (14)&lt;/span&gt;
+                    &lt;div class=&quot;toggle-switch active&quot;&gt;
+                        &lt;div class=&quot;toggle-slider&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
 
-                <div class="indicator-toggle" data-indicator="macd">
-                    <span class="indicator-label">MACD (12,26,9)</span>
-                    <div class="toggle-switch active">
-                        <div class="toggle-slider"></div>
-                    </div>
-                </div>
+                &lt;div class=&quot;indicator-toggle&quot; data-indicator=&quot;macd&quot;&gt;
+                    &lt;span class=&quot;indicator-label&quot;&gt;MACD (12,26,9)&lt;/span&gt;
+                    &lt;div class=&quot;toggle-switch active&quot;&gt;
+                        &lt;div class=&quot;toggle-slider&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
 
-                <div class="indicator-toggle" data-indicator="ema">
-                    <span class="indicator-label">EMA (20)</span>
-                    <div class="toggle-switch active">
-                        <div class="toggle-slider"></div>
-                    </div>
-                </div>
+                &lt;div class=&quot;indicator-toggle&quot; data-indicator=&quot;ema&quot;&gt;
+                    &lt;span class=&quot;indicator-label&quot;&gt;EMA (20)&lt;/span&gt;
+                    &lt;div class=&quot;toggle-switch active&quot;&gt;
+                        &lt;div class=&quot;toggle-slider&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
 
-                <div class="indicator-toggle" data-indicator="bb">
-                    <span class="indicator-label">Bollinger Bands</span>
-                    <div class="toggle-switch active">
-                        <div class="toggle-slider"></div>
-                    </div>
-                </div>
+                &lt;div class=&quot;indicator-toggle&quot; data-indicator=&quot;bb&quot;&gt;
+                    &lt;span class=&quot;indicator-label&quot;&gt;Bollinger Bands&lt;/span&gt;
+                    &lt;div class=&quot;toggle-switch active&quot;&gt;
+                        &lt;div class=&quot;toggle-slider&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
 
-                <div class="indicator-toggle" data-indicator="stoch">
-                    <span class="indicator-label">Stochastic</span>
-                    <div class="toggle-switch">
-                        <div class="toggle-slider"></div>
-                    </div>
-                </div>
+                &lt;div class=&quot;indicator-toggle&quot; data-indicator=&quot;stoch&quot;&gt;
+                    &lt;span class=&quot;indicator-label&quot;&gt;Stochastic&lt;/span&gt;
+                    &lt;div class=&quot;toggle-switch&quot;&gt;
+                        &lt;div class=&quot;toggle-slider&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
 
-                <div class="indicator-toggle" data-indicator="volume">
-                    <span class="indicator-label">Volume</span>
-                    <div class="toggle-switch active">
-                        <div class="toggle-slider"></div>
-                    </div>
-                </div>
+                &lt;div class=&quot;indicator-toggle&quot; data-indicator=&quot;volume&quot;&gt;
+                    &lt;span class=&quot;indicator-label&quot;&gt;Volume&lt;/span&gt;
+                    &lt;div class=&quot;toggle-switch active&quot;&gt;
+                        &lt;div class=&quot;toggle-slider&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
 
-                <div class="indicator-toggle" data-indicator="sma">
-                    <span class="indicator-label">SMA (50)</span>
-                    <div class="toggle-switch">
-                        <div class="toggle-slider"></div>
-                    </div>
-                </div>
-            </div>
+                &lt;div class=&quot;indicator-toggle&quot; data-indicator=&quot;sma&quot;&gt;
+                    &lt;span class=&quot;indicator-label&quot;&gt;SMA (50)&lt;/span&gt;
+                    &lt;div class=&quot;toggle-switch&quot;&gt;
+                        &lt;div class=&quot;toggle-slider&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
 
-            <!-- Replay Controls -->
-            <div class="replay-controls">
-                <div class="section-title">Replay Mode</div>
+            &lt;!-- Replay Controls --&gt;
+            &lt;div class=&quot;replay-controls&quot;&gt;
+                &lt;div class=&quot;section-title&quot;&gt;Replay Mode&lt;/div&gt;
                 
-                <div class="control-group">
-                    <label class="control-label">Start Date</label>
-                    <input type="datetime-local" id="replayStartDate">
-                </div>
+                &lt;div class=&quot;control-group&quot;&gt;
+                    &lt;label class=&quot;control-label&quot;&gt;Start Date&lt;/label&gt;
+                    &lt;input type=&quot;datetime-local&quot; id=&quot;replayStartDate&quot;&gt;
+                &lt;/div&gt;
 
-                <div class="control-group">
-                    <label class="control-label">End Date</label>
-                    <input type="datetime-local" id="replayEndDate">
-                </div>
+                &lt;div class=&quot;control-group&quot;&gt;
+                    &lt;label class=&quot;control-label&quot;&gt;End Date&lt;/label&gt;
+                    &lt;input type=&quot;datetime-local&quot; id=&quot;replayEndDate&quot;&gt;
+                &lt;/div&gt;
 
-                <div class="replay-buttons">
-                    <button class="replay-btn" id="replayPlay">▶ Play</button>
-                    <button class="replay-btn" id="replayPause">⏸ Pause</button>
-                    <button class="replay-btn" id="replayStop">⏹ Stop</button>
-                    <button class="replay-btn" id="replayRewind">⏪ Rewind</button>
-                </div>
+                &lt;div class=&quot;replay-buttons&quot;&gt;
+                    &lt;button class=&quot;replay-btn&quot; id=&quot;replayPlay&quot;&gt;▶ Play&lt;/button&gt;
+                    &lt;button class=&quot;replay-btn&quot; id=&quot;replayPause&quot;&gt;⏸ Pause&lt;/button&gt;
+                    &lt;button class=&quot;replay-btn&quot; id=&quot;replayStop&quot;&gt;⏹ Stop&lt;/button&gt;
+                    &lt;button class=&quot;replay-btn&quot; id=&quot;replayRewind&quot;&gt;⏪ Rewind&lt;/button&gt;
+                &lt;/div&gt;
 
-                <div class="speed-controls">
-                    <button class="speed-btn active" data-speed="1">1x</button>
-                    <button class="speed-btn" data-speed="2">2x</button>
-                    <button class="speed-btn" data-speed="5">5x</button>
-                    <button class="speed-btn" data-speed="10">10x</button>
-                </div>
+                &lt;div class=&quot;speed-controls&quot;&gt;
+                    &lt;button class=&quot;speed-btn active&quot; data-speed=&quot;1&quot;&gt;1x&lt;/button&gt;
+                    &lt;button class=&quot;speed-btn&quot; data-speed=&quot;2&quot;&gt;2x&lt;/button&gt;
+                    &lt;button class=&quot;speed-btn&quot; data-speed=&quot;5&quot;&gt;5x&lt;/button&gt;
+                    &lt;button class=&quot;speed-btn&quot; data-speed=&quot;10&quot;&gt;10x&lt;/button&gt;
+                &lt;/div&gt;
 
-                <!-- Progress Bar -->
-                <div class="progress-container">
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="replayProgress" style="width: 0%">
-                            <div class="progress-text" id="progressText">0%</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+                &lt;!-- Progress Bar --&gt;
+                &lt;div class=&quot;progress-container&quot;&gt;
+                    &lt;div class=&quot;progress-bar&quot;&gt;
+                        &lt;div class=&quot;progress-fill&quot; id=&quot;replayProgress&quot; style=&quot;width: 0%&quot;&gt;
+                            &lt;div class=&quot;progress-text&quot; id=&quot;progressText&quot;&gt;0%&lt;/div&gt;
+                        &lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <div class="chart-container">
-                <div class="chart-header">
-                    <div class="chart-title">Advanced Trading Charts</div>
-                    <div class="chart-controls">
-                        <button class="chart-btn active" data-chart="candlestick">Candlesticks</button>
-                        <button class="chart-btn" data-chart="line">Line</button>
-                        <button class="chart-btn" data-chart="area">Area</button>
-                        <button class="chart-btn" data-chart="heikin">Heikin-Ashi</button>
-                    </div>
-                </div>
+        &lt;!-- Main Content --&gt;
+        &lt;div class=&quot;main-content&quot;&gt;
+            &lt;div class=&quot;chart-container&quot;&gt;
+                &lt;div class=&quot;chart-header&quot;&gt;
+                    &lt;div class=&quot;chart-title&quot;&gt;Advanced Trading Charts&lt;/div&gt;
+                    &lt;div class=&quot;chart-controls&quot;&gt;
+                        &lt;button class=&quot;chart-btn active&quot; data-chart=&quot;candlestick&quot;&gt;Candlesticks&lt;/button&gt;
+                        &lt;button class=&quot;chart-btn&quot; data-chart=&quot;line&quot;&gt;Line&lt;/button&gt;
+                        &lt;button class=&quot;chart-btn&quot; data-chart=&quot;area&quot;&gt;Area&lt;/button&gt;
+                        &lt;button class=&quot;chart-btn&quot; data-chart=&quot;heikin&quot;&gt;Heikin-Ashi&lt;/button&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
 
-                <div class="chart-grid">
-                    <!-- Main Chart Pane -->
-                    <div class="chart-pane main-chart">
-                        <div class="chart-pane-header">Price Chart with Indicators</div>
-                        <div id="mainChart" style="width: 100%; flex: 1;"></div>
-                        <div class="loading-overlay" id="mainChartLoading">
-                            <div class="loading-spinner"></div>
-                            <div class="loading-text">Loading historical data...</div>
-                        </div>
-                    </div>
+                &lt;div class=&quot;chart-grid&quot;&gt;
+                    &lt;!-- Main Chart Pane --&gt;
+                    &lt;div class=&quot;chart-pane main-chart&quot;&gt;
+                        &lt;div class=&quot;chart-pane-header&quot;&gt;Price Chart with Indicators&lt;/div&gt;
+                        &lt;div id=&quot;mainChart&quot; style=&quot;width: 100%; flex: 1;&quot;&gt;&lt;/div&gt;
+                        &lt;div class=&quot;loading-overlay&quot; id=&quot;mainChartLoading&quot;&gt;
+                            &lt;div class=&quot;loading-spinner&quot;&gt;&lt;/div&gt;
+                            &lt;div class=&quot;loading-text&quot;&gt;Loading historical data...&lt;/div&gt;
+                        &lt;/div&gt;
+                    &lt;/div&gt;
 
-                    <!-- RSI Chart Pane -->
-                    <div class="chart-pane indicator-chart" id="rsiPane">
-                        <div class="chart-pane-header">RSI (Relative Strength Index)</div>
-                        <div id="rsiChart" style="width: 100%; flex: 1;"></div>
-                    </div>
+                    &lt;!-- RSI Chart Pane --&gt;
+                    &lt;div class=&quot;chart-pane indicator-chart&quot; id=&quot;rsiPane&quot;&gt;
+                        &lt;div class=&quot;chart-pane-header&quot;&gt;RSI (Relative Strength Index)&lt;/div&gt;
+                        &lt;div id=&quot;rsiChart&quot; style=&quot;width: 100%; flex: 1;&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
 
-                    <!-- MACD Chart Pane -->
-                    <div class="chart-pane indicator-chart" id="macdPane">
-                        <div class="chart-pane-header">MACD (Moving Average Convergence Divergence)</div>
-                        <div id="macdChart" style="width: 100%; flex: 1;"></div>
-                    </div>
+                    &lt;!-- MACD Chart Pane --&gt;
+                    &lt;div class=&quot;chart-pane indicator-chart&quot; id=&quot;macdPane&quot;&gt;
+                        &lt;div class=&quot;chart-pane-header&quot;&gt;MACD (Moving Average Convergence Divergence)&lt;/div&gt;
+                        &lt;div id=&quot;macdChart&quot; style=&quot;width: 100%; flex: 1;&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
 
-                    <!-- Volume Chart Pane -->
-                    <div class="chart-pane indicator-chart" id="volumePane">
-                        <div class="chart-pane-header">Volume</div>
-                        <div id="volumeChart" style="width: 100%; flex: 1;"></div>
-                    </div>
-                </div>
-            </div>
+                    &lt;!-- Volume Chart Pane --&gt;
+                    &lt;div class=&quot;chart-pane indicator-chart&quot; id=&quot;volumePane&quot;&gt;
+                        &lt;div class=&quot;chart-pane-header&quot;&gt;Volume&lt;/div&gt;
+                        &lt;div id=&quot;volumeChart&quot; style=&quot;width: 100%; flex: 1;&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
 
-            <!-- Status Bar -->
-            <div class="status-bar">
-                <div class="connection-status">
-                    <div class="status-dot connected" id="connectionStatus"></div>
-                    <span id="connectionText">Connected to Binance WebSocket</span>
-                </div>
-                <div class="data-info">
-                    <span id="dataInfo">Real-time data | Last update: <span id="lastUpdate">--:--:--</span></span>
-                </div>
-                <div class="performance-info">
-                    <span id="performanceInfo">Latency: <span id="latency">-- ms</span></span>
-                </div>
-            </div>
-        </div>
-    </div>
+            &lt;!-- Status Bar --&gt;
+            &lt;div class=&quot;status-bar&quot;&gt;
+                &lt;div class=&quot;connection-status&quot;&gt;
+                    &lt;div class=&quot;status-dot connected&quot; id=&quot;connectionStatus&quot;&gt;&lt;/div&gt;
+                    &lt;span id=&quot;connectionText&quot;&gt;Connected to Binance WebSocket&lt;/span&gt;
+                &lt;/div&gt;
+                &lt;div class=&quot;data-info&quot;&gt;
+                    &lt;span id=&quot;dataInfo&quot;&gt;Real-time data | Last update: &lt;span id=&quot;lastUpdate&quot;&gt;--:--:--&lt;/span&gt;&lt;/span&gt;
+                &lt;/div&gt;
+                &lt;div class=&quot;performance-info&quot;&gt;
+                    &lt;span id=&quot;performanceInfo&quot;&gt;Latency: &lt;span id=&quot;latency&quot;&gt;-- ms&lt;/span&gt;&lt;/span&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
 
-    <script>
+    &lt;script&gt;
         console.log('🚀 Advanced Trading Platform Initializing...');
         
         // ============================================
@@ -882,6 +881,3 @@
                     }),
                     middle: mainChart.addLineSeries({
                         color: 'rgba(139, 92,
-                        
-                        
-</plaintext>
