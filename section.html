@@ -1,89 +1,884 @@
-The links 'https://github.com/Mrzulubuntu/zulubuntu', 'https://github.com/Mrzulubuntu/zulubuntu/tree/main/apps', 'https://github.com/Mrzulubuntu/zulubuntu/tree/main/templates' 'https://github.com/Mrzulubuntu/zulubuntu/tree/main/config' refers to my new repository that we want to edit. It currently has a wonderful homepage / index page which we want to reserve and keep it as it is or at least for now. What we want is to add another page that will have our implemntation of the local tradingview kind of platform using the Tradingview lightweight library and a wonderful and key library 'https://github.com/louisnw01/lightweight-charts-python'. What we want to build is actually a series of things so as to make it as identical as possible to the actual Tradingview so we can access the familiar tools we are so accoustumed to. But first thing first, we will be streaming live data from binance. We already have our api ready to go. The things that we need to have / implement / have are:
+********* Fourth iteration *********
+&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+    &lt;meta charset=&quot;UTF-8&quot;&gt;
+    &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+    &lt;title&gt;Advanced TradingView Platform&lt;/title&gt;
+    &lt;script src=&quot;https://cdnjs.cloudflare.com/ajax/libs/lightweight-charts/4.1.3/lightweight-charts.standalone.production.js&quot;&gt;&lt;/script&gt;
+    &lt;style&gt;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-	1. Full Symbol and Interval Selector (TradingView Style). Symbol dropdown: BTCUSDT, ETHUSDT, BNBUSDT (easily expandable). Interval dropdown: supports tick, seconds, minutes, hours, days, weeks, months, and quarters. Dynamic WebSocket Routing. Cleanly tears down and reinitializes chart + socket on every change.
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #ffffff;
+            overflow: hidden;
+        }
 
-	2. Cleanly tears down and reinitializes chart + socket on every change. Separate RSI, MACD, Stochastic into their own pane containers. Sync time across panes. Improve layout spacing/responsiveness. A clean multi-pane layout: 🟠 Main pane → Candles, EMA, BBANDS. 🟣 RSI pane → Full-sized, synced time. 🔵 MACD pane → Own section, synced. ✅ Time synchronization across panes. ✅ Full dynamic switching still works.
+        .container {
+            display: flex;
+            height: 100vh;
+            position: relative;
+        }
 
-	3. Persist OHLC + all indicator values into DuckDB. Use Polars + Apache Arrow for blazing-fast queries. Prepare real-time + backtesting interfaces. DuckDB-based Local Data Storage.   Each symbol+interval combo stores to its own .duckdb file. Structure includes:timestamp, symbol, interval. open, high, low, close. ema, rsi, macd, bb_upper, bb_lower. All in columnar DuckDB tables – ready for lightning-speed queries and backtesting. To be fully equiped with / to: Query OHLC + indicators with Polars.Run analytics or backtests across months of data.Add historical candles to chart on load
+        /* Sidebar Styles */
+        .sidebar {
+            width: 280px;
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
 
-	4. Toggleable Indicators + UI Checkboxes. What we want to have is '🧩 UI toggles for RSI, MACD, EMA, and Bollinger Bands. ✅ Realtime on/off control over visibility using checkboxes. ✅ Responsive to user interaction — no reload required'. We also want to persist toggle states in localStorage so the user’s preferences sticks. And also 'Style toggles with AdminLTE badges or switches'.
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
 
-	5. Add historical candles from DuckDB on chart load. Enable multi-timeframe overlay from backend data. Add Datasette dashboard for offline exploration. Like, Load Historical Candles (from DuckDB). When the chart loads, we’ll fetch (say) the last 300 candles from DuckDB. These will be used to: Immediately populate the chart. Feed all indicator lines (EMA, RSI, etc.) on initial view. Also, Live Stream Picks Up (from Binance). After that initial history is drawn, your existing WebSocket feed kicks in. Every new candle pushed by Binance updates: The chart visually. DuckDB persistently. Indicator overlays. It will be powerful because Fast loading: You see a chart instantly, even before Binance streams. Backtesting-ready: All your candles + indicators are persisted. Smooth updates: New data keeps coming in live without breaking visuals. That is, we want to have DuckDB-powered historical candle loading on chart startup: When a WebSocket connection is made: The backend fetches the latest 300 candles from DuckDB. These are streamed to the frontend before Binance live data takes over. Why It Rocks: The chart loads with data instantly — no blank screen! All previously streamed data is reused — nothing wasted. Still fully live and real-time via Binance. 
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
 
-	6. 1R Range Bar Logic. Streams historical candles one by one with 0.5s delay. Default interval to 1R and it is important to include all the other ticks too (1,10, 100, 1000). A reminder that we want all the time intervals that are in the Tradingview platform eg 1,3,5,15,30,45mins then 1,2,3,4, 6, 12 hrs, 1 day, 1 week, 1 month, 3 months, 6 months, 12 months. Also, 1 tick, 10 ticks, 100ticks,  1000 ticks. Tradingview platform has both 'ticks' and ranges and we want them both. They are diffrent and we want them both. 
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.6);
+            border-radius: 3px;
+        }
 
-	7. We also want a replay feature like that of the Tradingview Platform. Streams OHLC+indicator rows from DuckDB. Streams OHLC+indicator rows from DuckDB. Sends them over the same WebSocket channel. Honors speed, start_time, end_time as params. When we hit Play, and it starts plotting candle by candle. Each candle comes in based on a timer (e.g. every 1s, 0.5s). Indicators are calculated + plotted just like in live mode. We can be able to like choose: Speed: 1x, 2x, 5x... Start time and End time. Pause, Rewind, or Fast forward. How Replay ought to work with our Current System: 🔧 Component	Role in Replay. DuckDB	Stores all the OHLC and indicators by timestamp ✅ WebSocket	Delivers replay candles just like Binance does ✅. Frontend Chart	Already set up to render streamed candles ✅. Replay Controller	You’ll add this UI to trigger start/pause/ff ✅. Add speed control (1x / 2x / 5x buttons). Add replay UI (Play, Pause, Stop, Rewind). Hook into keyboard shortcuts (space, left/right arrow). Combine with indicator auto-refresh during replay.
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
 
-	8. We also want that sidebar feature / panel. The part that has symbol, price, change in price (daily), change in % change (daily) that autorefreshes.
+        .logo h1 {
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 24px;
+            font-weight: bold;
+        }
 
-	9. It is also very, very important that, we have at least 7 of the most popular indicators and the ability / ui to switch them off and on, to change things like parameter values and what not.
+        .symbol-info {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
 
-	10. The script ought to be robust. Since it is python script, without any err handling capacity installed, we need to develop an error handling mechanism that come from our end and those that come from Binance. In case of an error, we need to sleep and check again after a prescribed time. We ought to have a yagmail library setup and telegram python communication mechanism for communication, written and developed but commented out until that time that they will be set-up. It goes without saying, that we need an extensive amount of logging handling it using those critical data tools like duckdb, apache arrow, datasette and or polars whenever possible / necessarily. We want an extensive amount of logging. What we also need, in large amounts, is print statement. Even if something is trivial, we want to see the terminal informing us of what is developing all around. We want comments even on trivial things so as to know which phase, part we are in and later for debugging reasons, we want a lot and a lot of comments. Usually, we place the comments to comeout with a transition, a smooth transition where we can adjust the delay of the letters and whatnot when it comes to controlling the speed of the transition but generally speaking, we like it when, the print statement (custom) is available. 
+        .symbol-name {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #6366f1;
+        }
 
-	11. Also in that script, we want to have a progress bar. Usually we employ tqdm. It is awesome especially when we use it and the progress is inline. We like it when the progress shows inline in that progressbar. It is a simple and elegant way. We usually fine tune that tqdm to have five fifferent colors so they change after every 20 percent. It is a way we do to beautify the progressbar and it is paramount that it the loading happens inline. We want a customized progressbar and we even saw that inside, they can be customized to be like '[|||||| 200]' or like '[██████ 800] ' or like '[★★★★★ 500]'. We would like to implement these into our progressbar and be using them randomly.
+        .price-info {
+            margin-bottom: 15px;
+        }
 
+        .current-price {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
 
-	12. We also want to employ the use of tables. There are a couple of awesome python libraries that offer beautiful tables. We would like those to be employed alongside the print statements. Elegance.
+        .price-change {
+            font-size: 14px;
+            padding: 4px 8px;
+            border-radius: 20px;
+            display: inline-block;
+        }
 
-	13. We want to have a lot and a lot of comments on everything. In fact, we would rather have those comment qoute things that enables people to generate markdowns but also, we would wan to have usual comments that are stacked here and there explaining even the most basic things. 
+        .price-change.positive {
+            color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
 
-	14. We would like to emphasis on the need and importance of err handling and reporting mechanism because errs help in debugging among other things. The types of errs can differ and it is imperative that we get err handling done right, both at the server level and api's like Binance and the rest. 
+        .price-change.negative {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
 
-	15. On Storage + Query Engine, we are thinking, move to Polars + Apache Arrow for in-RAM processing	Lightning fast analysis / aggregation and use Polars on top of DuckDB or as standalone for indicators, backtests. Add ClickHouse & TimescaleDB	For large-scale price + trade storage -- store tick-level or minute candles and query billions of rows. Cache with Redis	Super quick access to current candle state	Push most recent values from WebSocket into Redis.
+        .controls-section {
+            margin-bottom: 25px;
+        }
 
-	16. On Backend / Realtime Infrastructure, use FastAPI instead of Django REST (for API endpoints) -- Async, faster, easier to scale	Still use Django for templates if needed. Replace Channels with Socket.IO (via Node.js) or WebSockets via FastAPI. Easier to handle hundreds of concurrent sockets	If needed under load. se Celery + Redis	For async background jobs (fetch historical data, replay simulation). Keeps UI fast and offloads work.
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #a5b4fc;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
 
-	17. On Frontend / Charts, Switch to React (with Hooks or Zustand state)	Componentized, reactive state	Use lightweight-charts-react. Move replay and indicators to Web Workers	Offload heavy calculation from UI thread. Makes UI snappy even on slow machines.
+        .control-group {
+            margin-bottom: 20px;
+        }
 
-	18. On Architecture / Deployment, Dockerize each service maybe even use k8. Easier to test, deploy, swap out parts DB, backend, frontend, WebSocket worker. Use Kafka	for building multi-service event system	that will be helpful later for distributed microservices especially when we start automating trading based on signals. We might also need to use NATS...perhaps.
+        .control-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #cbd5e1;
+            font-weight: 500;
+        }
 
-	19. On Security + Auth, Add user login system using google.  Supabase Auth sounds super best option but the thing that we want, is that only we can enter; only our email address can be valid so if a stranger logs into the site with their google account, they will get redirected to a 404 page. 
+        select, input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
 
-	20. We are of the opinion that we ought to build DuckDB + indicators to use Polars for blazing speed. Plug in Kafka producers/consumers to simulate or handle ticks, trades, replays. Set up Supabase integration: Store user info, watchlists, settings. Map trades to users then slowly migrate backend API endpoints (e.g. /trades/, /replay/) into FastAPI.
+        select:focus, input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
 
-	21. We ought to add a settings UI to be editing things like params, line details, color, tooltips etc.
+        /* Indicator Controls */
+        .indicator-controls {
+            margin-bottom: 25px;
+        }
 
-	22. Advanced Charting & Visualization
+        .indicator-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
 
-		Drawing Tools: Trend lines, horizontal/vertical lines, Fibonacci retracements, support/resistance levels, geometric shapes
-		Chart Types: Heikin-Ashi, Renko, Point & Figure, Line Break charts beyond standard candlesticks
-		Volume Profile: Market profile, volume-by-price, VWAP anchored to different periods
-		Multiple Symbol Overlay: Compare different assets on same chart with normalized scaling
-		Custom Timeframes: Non-standard intervals like 2min, 7min, 4hr for advanced strategies
+        .indicator-toggle:hover {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
 
-		Enhanced Technical Analysis
+        .indicator-label {
+            font-weight: 500;
+            color: #e2e8f0;
+        }
 
-		Advanced Indicators: Ichimoku Cloud, Elliott Wave patterns, Harmonic patterns, Custom indicator builder
-		Alerts System: Price alerts, indicator crossovers, pattern recognition alerts with push notifications
-		Screener: Real-time scanning across all symbols for specific conditions
-		Strategy Backtesting: Visual strategy tester with performance metrics, drawdown analysis
-		Paper Trading: Virtual trading environment with P&L tracking
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: rgba(75, 85, 99, 0.8);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
 
-		Data & Performance Optimization
+        .toggle-switch.active {
+            background: #6366f1;
+        }
 
-		Multi-Exchange Support: Coinbase, Kraken, KuCoin data aggregation
-		Tick-by-Tick Data: Sub-second granularity for scalping strategies
-		Data Compression: Efficient storage using columnar formats, data deduplication
-		Smart Caching: Predictive prefetching based on user patterns
-		Offline Mode: Continue analysis with cached data during connectivity issues
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: #ffffff;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
 
-		User Experience & Interface
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(26px);
+        }
 
-		Workspace Management: Save/load custom layouts, multiple workspace templates
-		Keyboard Shortcuts: Power user navigation, hotkeys for common actions
-		Mobile Responsive: Touch-optimized charts for tablets/phones
-		Dark/Light Themes: Multiple color schemes, high contrast mode
-		Accessibility: Screen reader support, keyboard navigation
+        /* Replay Controls */
+        .replay-controls {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
 
-		Advanced Features
+        .replay-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
 
-		Market Depth: Order book visualization, bid/ask spread analysis
-		News Integration: Real-time news feed correlated with price movements
-		Social Trading: Share analysis, follow other traders' ideas
-		Economic Calendar: Major events with historical impact analysis
-		Correlation Analysis: Cross-asset correlation matrices, sector rotation
-  
+        .replay-btn {
+            flex: 1;
+            min-width: 60px;
+            padding: 10px;
+            background: rgba(99, 102, 241, 0.8);
+            border: none;
+            border-radius: 6px;
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
 
-We want the step by step guide on how to build the final product based on the information provided above. We want the what, the where, the how and a lot of explanations on what we are doing, why, how they connect to other parts. We also want to checklist before and a summary of all we have done.
+        .replay-btn:hover {
+            background: #6366f1;
+            transform: translateY(-1px);
+        }
 
+        .replay-btn:active {
+            transform: translateY(0);
+        }
 
+        .replay-btn.playing {
+            background: #10b981;
+        }
+
+        .speed-controls {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .speed-btn {
+            flex: 1;
+            padding: 8px;
+            background: rgba(75, 85, 99, 0.6);
+            border: none;
+            border-radius: 4px;
+            color: #cbd5e1;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .speed-btn.active {
+            background: #6366f1;
+            color: #ffffff;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .chart-container {
+            flex: 1;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .chart-btn {
+            padding: 8px 16px;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 6px;
+            color: #a5b4fc;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .chart-btn:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: #6366f1;
+        }
+
+        .chart-btn.active {
+            background: #6366f1;
+            color: #ffffff;
+        }
+
+        .chart-grid {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            gap: 15px;
+            min-height: 0;
+        }
+
+        .chart-pane {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .main-chart {
+            flex: 3;
+            min-height: 400px;
+        }
+
+        .indicator-chart {
+            flex: 1;
+            min-height: 150px;
+        }
+
+        .chart-pane-header {
+            padding: 10px 15px;
+            background: rgba(15, 23, 42, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 14px;
+            font-weight: 500;
+            color: #a5b4fc;
+        }
+
+        /* Status and Loading */
+        .status-bar {
+            padding: 15px 20px;
+            background: rgba(15, 23, 42, 0.9);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: #10b981;
+        }
+
+        .status-dot.disconnected {
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 1000;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(99, 102, 241, 0.3);
+            border-top: 3px solid #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #a5b4fc;
+            font-size: 14px;
+        }
+
+        /* Progress Bar Styles */
+        .progress-container {
+            margin: 15px 0;
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(75, 85, 99, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            font-weight: 600;
+            color: #ffffff;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 250px;
+                transform: translateX(-100%);
+                position: fixed;
+                z-index: 1000;
+                height: 100vh;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .chart-grid {
+                flex-direction: column;
+            }
+
+            .replay-buttons {
+                flex-direction: column;
+            }
+        }
+
+        /* Utility Classes */
+        .hidden {
+            display: none !important;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;div class=&quot;container&quot;&gt;
+        &lt;!-- Sidebar --&gt;
+        &lt;div class=&quot;sidebar&quot;&gt;
+            &lt;div class=&quot;logo&quot;&gt;
+                &lt;h1&gt;TradingView Pro&lt;/h1&gt;
+            &lt;/div&gt;
+
+            &lt;!-- Symbol Information --&gt;
+            &lt;div class=&quot;symbol-info&quot;&gt;
+                &lt;div class=&quot;symbol-name&quot; id=&quot;symbolDisplay&quot;&gt;BTCUSDT&lt;/div&gt;
+                &lt;div class=&quot;price-info&quot;&gt;
+                    &lt;div class=&quot;current-price&quot; id=&quot;currentPrice&quot;&gt;$0.00&lt;/div&gt;
+                    &lt;div class=&quot;price-change positive&quot; id=&quot;priceChange&quot;&gt;+0.00 (0.00%)&lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+
+            &lt;!-- Controls Section --&gt;
+            &lt;div class=&quot;controls-section&quot;&gt;
+                &lt;div class=&quot;section-title&quot;&gt;Market Data&lt;/div&gt;
+                
+                &lt;div class=&quot;control-group&quot;&gt;
+                    &lt;label class=&quot;control-label&quot;&gt;Symbol&lt;/label&gt;
+                    &lt;select id=&quot;symbolSelect&quot;&gt;
+                        &lt;option value=&quot;BTCUSDT&quot;&gt;BTCUSDT&lt;/option&gt;
+                        &lt;option value=&quot;ETHUSDT&quot;&gt;ETHUSDT&lt;/option&gt;
+                        &lt;option value=&quot;BNBUSDT&quot;&gt;BNBUSDT&lt;/option&gt;
+                        &lt;option value=&quot;ADAUSDT&quot;&gt;ADAUSDT&lt;/option&gt;
+                        &lt;option value=&quot;XRPUSDT&quot;&gt;XRPUSDT&lt;/option&gt;
+                        &lt;option value=&quot;SOLUSDT&quot;&gt;SOLUSDT&lt;/option&gt;
+                        &lt;option value=&quot;DOGEUSDT&quot;&gt;DOGEUSDT&lt;/option&gt;
+                        &lt;option value=&quot;AVAXUSDT&quot;&gt;AVAXUSDT&lt;/option&gt;
+                    &lt;/select&gt;
+                &lt;/div&gt;
+
+                &lt;div class=&quot;control-group&quot;&gt;
+                    &lt;label class=&quot;control-label&quot;&gt;Timeframe&lt;/label&gt;
+                    &lt;select id=&quot;intervalSelect&quot;&gt;
+                        &lt;option value=&quot;1s&quot;&gt;1 Second&lt;/option&gt;
+                        &lt;option value=&quot;1m&quot;&gt;1 Minute&lt;/option&gt;
+                        &lt;option value=&quot;3m&quot;&gt;3 Minutes&lt;/option&gt;
+                        &lt;option value=&quot;5m&quot;&gt;5 Minutes&lt;/option&gt;
+                        &lt;option value=&quot;15m&quot;&gt;15 Minutes&lt;/option&gt;
+                        &lt;option value=&quot;30m&quot;&gt;30 Minutes&lt;/option&gt;
+                        &lt;option value=&quot;1h&quot;&gt;1 Hour&lt;/option&gt;
+                        &lt;option value=&quot;2h&quot;&gt;2 Hours&lt;/option&gt;
+                        &lt;option value=&quot;4h&quot;&gt;4 Hours&lt;/option&gt;
+                        &lt;option value=&quot;6h&quot;&gt;6 Hours&lt;/option&gt;
+                        &lt;option value=&quot;8h&quot;&gt;8 Hours&lt;/option&gt;
+                        &lt;option value=&quot;12h&quot;&gt;12 Hours&lt;/option&gt;
+                        &lt;option value=&quot;1d&quot;&gt;1 Day&lt;/option&gt;
+                        &lt;option value=&quot;3d&quot;&gt;3 Days&lt;/option&gt;
+                        &lt;option value=&quot;1w&quot;&gt;1 Week&lt;/option&gt;
+                        &lt;option value=&quot;1M&quot;&gt;1 Month&lt;/option&gt;
+                    &lt;/select&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+
+            &lt;!-- Indicator Controls --&gt;
+            &lt;div class=&quot;indicator-controls&quot;&gt;
+                &lt;div class=&quot;section-title&quot;&gt;Technical Indicators&lt;/div&gt;
+                
+                &lt;div class=&quot;indicator-toggle&quot; data-indicator=&quot;rsi&quot;&gt;
+                    &lt;span class=&quot;indicator-label&quot;&gt;RSI (14)&lt;/span&gt;
+                    &lt;div class=&quot;toggle-switch active&quot;&gt;
+                        &lt;div class=&quot;toggle-slider&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+
+                &lt;div class=&quot;indicator-toggle&quot; data-indicator=&quot;macd&quot;&gt;
+                    &lt;span class=&quot;indicator-label&quot;&gt;MACD (12,26,9)&lt;/span&gt;
+                    &lt;div class=&quot;toggle-switch active&quot;&gt;
+                        &lt;div class=&quot;toggle-slider&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+
+                &lt;div class=&quot;indicator-toggle&quot; data-indicator=&quot;ema&quot;&gt;
+                    &lt;span class=&quot;indicator-label&quot;&gt;EMA (20)&lt;/span&gt;
+                    &lt;div class=&quot;toggle-switch active&quot;&gt;
+                        &lt;div class=&quot;toggle-slider&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+
+                &lt;div class=&quot;indicator-toggle&quot; data-indicator=&quot;bb&quot;&gt;
+                    &lt;span class=&quot;indicator-label&quot;&gt;Bollinger Bands&lt;/span&gt;
+                    &lt;div class=&quot;toggle-switch active&quot;&gt;
+                        &lt;div class=&quot;toggle-slider&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+
+                &lt;div class=&quot;indicator-toggle&quot; data-indicator=&quot;stoch&quot;&gt;
+                    &lt;span class=&quot;indicator-label&quot;&gt;Stochastic&lt;/span&gt;
+                    &lt;div class=&quot;toggle-switch&quot;&gt;
+                        &lt;div class=&quot;toggle-slider&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+
+                &lt;div class=&quot;indicator-toggle&quot; data-indicator=&quot;volume&quot;&gt;
+                    &lt;span class=&quot;indicator-label&quot;&gt;Volume&lt;/span&gt;
+                    &lt;div class=&quot;toggle-switch active&quot;&gt;
+                        &lt;div class=&quot;toggle-slider&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+
+                &lt;div class=&quot;indicator-toggle&quot; data-indicator=&quot;sma&quot;&gt;
+                    &lt;span class=&quot;indicator-label&quot;&gt;SMA (50)&lt;/span&gt;
+                    &lt;div class=&quot;toggle-switch&quot;&gt;
+                        &lt;div class=&quot;toggle-slider&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+
+            &lt;!-- Replay Controls --&gt;
+            &lt;div class=&quot;replay-controls&quot;&gt;
+                &lt;div class=&quot;section-title&quot;&gt;Replay Mode&lt;/div&gt;
+                
+                &lt;div class=&quot;control-group&quot;&gt;
+                    &lt;label class=&quot;control-label&quot;&gt;Start Date&lt;/label&gt;
+                    &lt;input type=&quot;datetime-local&quot; id=&quot;replayStartDate&quot;&gt;
+                &lt;/div&gt;
+
+                &lt;div class=&quot;control-group&quot;&gt;
+                    &lt;label class=&quot;control-label&quot;&gt;End Date&lt;/label&gt;
+                    &lt;input type=&quot;datetime-local&quot; id=&quot;replayEndDate&quot;&gt;
+                &lt;/div&gt;
+
+                &lt;div class=&quot;replay-buttons&quot;&gt;
+                    &lt;button class=&quot;replay-btn&quot; id=&quot;replayPlay&quot;&gt;▶ Play&lt;/button&gt;
+                    &lt;button class=&quot;replay-btn&quot; id=&quot;replayPause&quot;&gt;⏸ Pause&lt;/button&gt;
+                    &lt;button class=&quot;replay-btn&quot; id=&quot;replayStop&quot;&gt;⏹ Stop&lt;/button&gt;
+                    &lt;button class=&quot;replay-btn&quot; id=&quot;replayRewind&quot;&gt;⏪ Rewind&lt;/button&gt;
+                &lt;/div&gt;
+
+                &lt;div class=&quot;speed-controls&quot;&gt;
+                    &lt;button class=&quot;speed-btn active&quot; data-speed=&quot;1&quot;&gt;1x&lt;/button&gt;
+                    &lt;button class=&quot;speed-btn&quot; data-speed=&quot;2&quot;&gt;2x&lt;/button&gt;
+                    &lt;button class=&quot;speed-btn&quot; data-speed=&quot;5&quot;&gt;5x&lt;/button&gt;
+                    &lt;button class=&quot;speed-btn&quot; data-speed=&quot;10&quot;&gt;10x&lt;/button&gt;
+                &lt;/div&gt;
+
+                &lt;!-- Progress Bar --&gt;
+                &lt;div class=&quot;progress-container&quot;&gt;
+                    &lt;div class=&quot;progress-bar&quot;&gt;
+                        &lt;div class=&quot;progress-fill&quot; id=&quot;replayProgress&quot; style=&quot;width: 0%&quot;&gt;
+                            &lt;div class=&quot;progress-text&quot; id=&quot;progressText&quot;&gt;0%&lt;/div&gt;
+                        &lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;!-- Main Content --&gt;
+        &lt;div class=&quot;main-content&quot;&gt;
+            &lt;div class=&quot;chart-container&quot;&gt;
+                &lt;div class=&quot;chart-header&quot;&gt;
+                    &lt;div class=&quot;chart-title&quot;&gt;Advanced Trading Charts&lt;/div&gt;
+                    &lt;div class=&quot;chart-controls&quot;&gt;
+                        &lt;button class=&quot;chart-btn active&quot; data-chart=&quot;candlestick&quot;&gt;Candlesticks&lt;/button&gt;
+                        &lt;button class=&quot;chart-btn&quot; data-chart=&quot;line&quot;&gt;Line&lt;/button&gt;
+                        &lt;button class=&quot;chart-btn&quot; data-chart=&quot;area&quot;&gt;Area&lt;/button&gt;
+                        &lt;button class=&quot;chart-btn&quot; data-chart=&quot;heikin&quot;&gt;Heikin-Ashi&lt;/button&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+
+                &lt;div class=&quot;chart-grid&quot;&gt;
+                    &lt;!-- Main Chart Pane --&gt;
+                    &lt;div class=&quot;chart-pane main-chart&quot;&gt;
+                        &lt;div class=&quot;chart-pane-header&quot;&gt;Price Chart with Indicators&lt;/div&gt;
+                        &lt;div id=&quot;mainChart&quot; style=&quot;width: 100%; flex: 1;&quot;&gt;&lt;/div&gt;
+                        &lt;div class=&quot;loading-overlay&quot; id=&quot;mainChartLoading&quot;&gt;
+                            &lt;div class=&quot;loading-spinner&quot;&gt;&lt;/div&gt;
+                            &lt;div class=&quot;loading-text&quot;&gt;Loading historical data...&lt;/div&gt;
+                        &lt;/div&gt;
+                    &lt;/div&gt;
+
+                    &lt;!-- RSI Chart Pane --&gt;
+                    &lt;div class=&quot;chart-pane indicator-chart&quot; id=&quot;rsiPane&quot;&gt;
+                        &lt;div class=&quot;chart-pane-header&quot;&gt;RSI (Relative Strength Index)&lt;/div&gt;
+                        &lt;div id=&quot;rsiChart&quot; style=&quot;width: 100%; flex: 1;&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
+
+                    &lt;!-- MACD Chart Pane --&gt;
+                    &lt;div class=&quot;chart-pane indicator-chart&quot; id=&quot;macdPane&quot;&gt;
+                        &lt;div class=&quot;chart-pane-header&quot;&gt;MACD (Moving Average Convergence Divergence)&lt;/div&gt;
+                        &lt;div id=&quot;macdChart&quot; style=&quot;width: 100%; flex: 1;&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
+
+                    &lt;!-- Volume Chart Pane --&gt;
+                    &lt;div class=&quot;chart-pane indicator-chart&quot; id=&quot;volumePane&quot;&gt;
+                        &lt;div class=&quot;chart-pane-header&quot;&gt;Volume&lt;/div&gt;
+                        &lt;div id=&quot;volumeChart&quot; style=&quot;width: 100%; flex: 1;&quot;&gt;&lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+
+            &lt;!-- Status Bar --&gt;
+            &lt;div class=&quot;status-bar&quot;&gt;
+                &lt;div class=&quot;connection-status&quot;&gt;
+                    &lt;div class=&quot;status-dot connected&quot; id=&quot;connectionStatus&quot;&gt;&lt;/div&gt;
+                    &lt;span id=&quot;connectionText&quot;&gt;Connected to Binance WebSocket&lt;/span&gt;
+                &lt;/div&gt;
+                &lt;div class=&quot;data-info&quot;&gt;
+                    &lt;span id=&quot;dataInfo&quot;&gt;Real-time data | Last update: &lt;span id=&quot;lastUpdate&quot;&gt;--:--:--&lt;/span&gt;&lt;/span&gt;
+                &lt;/div&gt;
+                &lt;div class=&quot;performance-info&quot;&gt;
+                    &lt;span id=&quot;performanceInfo&quot;&gt;Latency: &lt;span id=&quot;latency&quot;&gt;-- ms&lt;/span&gt;&lt;/span&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;script&gt;
+        console.log('🚀 Advanced Trading Platform Initializing...');
+        
+        // ============================================
+        // GLOBAL VARIABLES AND CONFIGURATION
+        // ============================================
+        
+        let mainChart, rsiChart, macdChart, volumeChart;
+        let candlestickSeries, volumeSeries, emaSeries, bbSeries;
+        let rsiLineSeries, macdLineSeries, macdSignalSeries, macdHistogramSeries;
+        let volumeBarSeries;
+        
+        let websocket = null;
+        let currentSymbol = 'BTCUSDT';
+        let currentInterval = '1m';
+        let isReplayMode = false;
+        let replaySpeed = 1;
+        let replayTimer = null;
+        let replayData = [];
+        let replayIndex = 0;
+        
+        // Data storage
+        let ohlcData = [];
+        let volumeData = [];
+        let indicatorData = {
+            rsi: [],
+            macd: [],
+            macdSignal: [],
+            macdHistogram: [],
+            ema: [],
+            bbUpper: [],
+            bbLower: [],
+            bbMiddle: []
+        };
+        
+        // Performance tracking
+        let lastUpdateTime = Date.now();
+        let latencySum = 0;
+        let latencyCount = 0;
+        
+        // UI state
+        let activeIndicators = {
+            rsi: true,
+            macd: true,
+            ema: true,
+            bb: true,
+            stoch: false,
+            volume: true,
+            sma: false
+        };
+        
+        console.log('📊 Configuration loaded successfully');
+        
+        // ============================================
+        // CHART INITIALIZATION
+        // ============================================
+        
+        function initializeCharts() {
+            console.log('🎯 Initializing chart components...');
+            
+            try {
+                // Main Chart Configuration
+                const mainChartOptions = {
+                    width: 0,
+                    height: 0,
+                    layout: {
+                        background: { type: 'solid', color: 'rgba(0, 0, 0, 0)' },
+                        textColor: '#d1d5db',
+                        fontSize: 12,
+                        fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif'
+                    },
+                    grid: {
+                        vertLines: { color: 'rgba(99, 102, 241, 0.1)' },
+                        horzLines: { color: 'rgba(99, 102, 241, 0.1)' }
+                    },
+                    crosshair: {
+                        mode: LightweightCharts.CrosshairMode.Normal,
+                        vertLine: {
+                            color: 'rgba(99, 102, 241, 0.6)',
+                            width: 1,
+                            style: LightweightCharts.LineStyle.Dashed
+                        },
+                        horzLine: {
+                            color: 'rgba(99, 102, 241, 0.6)',
+                            width: 1,
+                            style: LightweightCharts.LineStyle.Dashed
+                        }
+                    },
+                    rightPriceScale: {
+                        borderColor: 'rgba(99, 102, 241, 0.3)',
+                        textColor: '#d1d5db',
+                        scaleMargins: { top: 0.1, bottom: 0.1 }
+                    },
+                    timeScale: {
+                        borderColor: 'rgba(99, 102, 241, 0.3)',
+                        textColor: '#d1d5db',
+                        timeVisible: true,
+                        secondsVisible: false
+                    },
+                    handleScroll: {
+                        mouseWheel: true,
+                        pressedMouseMove: true,
+                        horzTouchDrag: true,
+                        vertTouchDrag: true
+                    },
+                    handleScale: {
+                        axisPressedMouseMove: true,
+                        mouseWheel: true,
+                        pinch: true
+                    }
+                };
+                
+                // Initialize main chart
+                const mainChartElement = document.getElementById('mainChart');
+                mainChart = LightweightCharts.createChart(mainChartElement, mainChartOptions);
+                
+                // Add candlestick series
+                candlestickSeries = mainChart.addCandlestickSeries({
+                    upColor: '#10b981',
+                    downColor: '#ef4444',
+                    borderDownColor: '#ef4444',
+                    borderUpColor: '#10b981',
+                    wickDownColor: '#ef4444',
+                    wickUpColor: '#10b981'
+                });
+                
+                // Add EMA series
+                emaSeries = mainChart.addLineSeries({
+                    color: '#6366f1',
+                    lineWidth: 2,
+                    title: 'EMA(20)'
+                });
+                
+                // Add Bollinger Bands
+                bbSeries = {
+                    upper: mainChart.addLineSeries({
+                        color: 'rgba(139, 92, 246, 0.6)',
+                        lineWidth: 1,
+                        title: 'BB Upper'
+                    }),
+                    middle: mainChart.addLineSeries({
+                        color: 'rgba(139, 92,
