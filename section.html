@@ -123,6 +123,7 @@ Here's the complete implementation to address all gaps in the HTML/CSS/JS, cover
 1. Advanced Charting Tools (chart.html)
 html
 <!-- Add to chart container -->
+<pre>
 <div class="chart-tools">
   <button data-tool="trendline">Trend Line</button>
   <button data-tool="fibonacci">Fibonacci</button>
@@ -133,8 +134,10 @@ html
     <option value="renko">Renko (10pips)</option>
   </select>
 </div>
-
+</pre>
+  
 <script>
+  
 // Drawing Tools Integration
 const drawingManager = {
   activeTool: null,
@@ -254,6 +257,7 @@ document.querySelectorAll('.param-input').forEach(input => {
 </script>
 3. Enhanced Sidebar with Watchlist (sidebar.html)
 html
+<pre>
 <div class="sidebar-section">
   <h3>Watchlist</h3>
   <div class="watchlist-items">
@@ -277,6 +281,7 @@ html
     <div class="portfolio-change positive">+5.3% (24h)</div>
   </div>
 </div>
+</pre>
 4. Auth Integration (auth.js)
 javascript
 // Google Auth with Supabase
@@ -1044,6 +1049,7 @@ celery -A apps.tasks.celery_config worker --loglevel=info -P gevent
 File: templates/settings.html
 
 html
+<pre>
 <div class="settings-panel">
   <h3>Chart Settings</h3>
   
@@ -1078,6 +1084,7 @@ html
 
   <button id="saveSettings">Save Settings</button>
 </div>
+</pre>
 
 <script>
 document.getElementById('saveSettings').addEventListener('click', () => {
@@ -1328,6 +1335,7 @@ async function reloadIndicators() {
 Step 1: Full Vue Component
 html
 <!-- templates/settings.vue -->
+<pre>
 <template>
   <div class="settings-panel">
     <h3>Chart Configuration</h3>
@@ -1367,6 +1375,7 @@ html
     <button @click="saveSettings">Apply Settings</button>
   </div>
 </template>
+</pre>
 
 <script>
 export default {
@@ -1496,6 +1505,7 @@ javascript
 function showErrorToUser(error) {
     const errorDiv = document.getElementById('error-toast');
     errorDiv.innerHTML = `
+        <pre>
         <div class="error-header">
             <span>⚠️ Error</span>
             <button onclick="this.parentElement.parentElement.remove()">×</button>
@@ -1504,6 +1514,7 @@ function showErrorToUser(error) {
             ${error.message}
             <small>${new Date().toLocaleTimeString()}</small>
         </div>
+        </pre>
     `;
     errorDiv.style.display = 'block';
     
